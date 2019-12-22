@@ -20,6 +20,10 @@ while True:
         first_frame = gray
         continue
 
+    # Определить различия между первым кадром и остальными
+    delta_frame = cv2.absdiff(first_frame, gray)
+    cv2.imshow('frame-delta', delta_frame)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
