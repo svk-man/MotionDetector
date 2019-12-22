@@ -3,10 +3,11 @@ import cv2
 
 first_frame = None
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('video/video#1.mp4')
 
-while True:
+while cap.isOpened():
     ret, frame = cap.read()
+    frame = cv2.resize(frame, (720, 480))
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('frame', gray)
@@ -25,7 +26,7 @@ while True:
     cv2.imshow('frame-delta', delta_frame)
 
     # Преобразовать кадр в оттенках серого в черно-белый
-    thresh_delta = cv2.threshold(delta_frame, 20, 255, cv2.THRESH_BINARY)[1]
+    thresh_delta = cv2.threshold(delta_frame, 35, 255, cv2.THRESH_BINARY)[1]
 
     # Расширить светлые области и сузить темные
     thresh_delta = cv2.dilate(thresh_delta, None, iterations=2)
