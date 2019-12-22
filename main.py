@@ -26,7 +26,10 @@ while True:
 
     # Преобразовать кадр в оттенках серого в черно-белый
     thresh_delta = cv2.threshold(delta_frame, 30, 255, cv2.THRESH_BINARY)[1]
-    print(thresh_delta)
+
+    # Расширить светлые области и сузить темные
+    thresh_delta = cv2.dilate(delta_frame, None, iterations=0)
+    cv2.imshow('frame-dilate', thresh_delta)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
