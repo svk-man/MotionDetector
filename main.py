@@ -24,6 +24,10 @@ while True:
     delta_frame = cv2.absdiff(first_frame, gray)
     cv2.imshow('frame-delta', delta_frame)
 
+    # Преобразовать кадр в оттенках серого в черно-белый
+    thresh_delta = cv2.threshold(delta_frame, 30, 255, cv2.THRESH_BINARY)[1]
+    print(thresh_delta)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
