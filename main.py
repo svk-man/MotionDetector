@@ -3,11 +3,13 @@ import cv2
 
 first_frame = None
 
-cap = cv2.VideoCapture('video/video#1.mp4')
+cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture('video/video#1.mp4')
 
-while cap.isOpened():
+while True:
+    # while cap.isOpened():
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (720, 480))
+    # frame = cv2.resize(frame, (720, 480))
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('frame', gray)
@@ -35,12 +37,21 @@ while cap.isOpened():
     # Поиск контуров
     (cnts, _) = cv2.findContours(thresh_delta.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    for contour in cnts:
-        if cv2.contourArea(contour) < 1000:
-            continue
+    # Найти максимальное значение площади и выделить объект прямоугольником
+    if cnts:
+        area_max = 0
+        index = 0
+        index_max_area = 0
+        for contour in cnts:
+            area = cv2.contourArea(contour)
+            if area > area_max:
+                area_max = area
+                index_max_area = index
+            index = index + 1
 
-        (x, y, w, h) = cv2.boundingRect(contour)
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
+        cnt = cnts[index_max_area]
+        x, y, w, h = cv2.boundingRect(cnt)
+        image = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
     cv2.imshow('frame-result', frame)
 
