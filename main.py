@@ -1,6 +1,19 @@
 import numpy as np
 import cv2
 
+
+def save_to_file(filename, content):
+    fh = None
+    try:
+        fh = open(filename, "w", encoding="utf-8")
+        fh.write(content)
+    except Exception as e:
+        print("Ошибка при работе с файлом:", e)
+    finally:
+        if fh:
+            fh.close()
+
+
 first_frame = None
 
 cap = cv2.VideoCapture(0)
@@ -60,3 +73,5 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+save_to_file("test.txt", "content")
