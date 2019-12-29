@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 import xml.etree.ElementTree as ET
+import os
+import glob
 
 
 def save_to_file(filename, content):
@@ -51,12 +53,28 @@ def create_xml(filename):
     tree.write(filename)
 
 
+video_dir = 'video/'
+temp_dir = 'temp/'
+video_name = 'video#1.mp4'
+video = video_dir + video_name
+
+frame_index = 1
+temp_video_dir = temp_dir + video_name + "/"
+if not os.path.exists(temp_video_dir):
+    # Создать директорию с временными файлами для заданного видео
+    os.makedirs(temp_video_dir)
+else:
+    # Очистить все файлы в директории с временными файлами для заданного видео
+    files = glob.glob(temp_video_dir + "*")
+    for f in files:
+        os.remove(f)
+
 first_frame = None
 
-#cap = cv2.VideoCapture(0)
-cap = cv2.VideoCapture('video/video#1.mp4')
+# cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(video)
 
-    #while True:
+# while True:
 while cap.isOpened():
     ret, frame = cap.read()
     frame = cv2.resize(frame, (720, 480))
@@ -105,6 +123,10 @@ while cap.isOpened():
 
     cv2.imshow('frame-result', frame)
 
+    # Сохранить кадр из видео в png-файл
+    cv2.imwrite(temp_video_dir + 'frame' + str(frame_index) + '.png', frame)
+    frame_index = frame_index + 1
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
@@ -112,4 +134,3 @@ cap.release()
 cv2.destroyAllWindows()
 
 create_xml("test.xml")
-
