@@ -53,13 +53,13 @@ def create_xml(filename):
 
 first_frame = None
 
-cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture('video/video#1.mp4')
+#cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('video/video#1.mp4')
 
-while True:
-    # while cap.isOpened():
+    #while True:
+while cap.isOpened():
     ret, frame = cap.read()
-    # frame = cv2.resize(frame, (720, 480))
+    frame = cv2.resize(frame, (720, 480))
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('frame', gray)
