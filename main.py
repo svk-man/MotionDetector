@@ -79,69 +79,72 @@ cap = cv2.VideoCapture(video)
 # while True:
 while cap.isOpened():
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (frame_size, frame_height))
+    if frame is not None:
+        frame = cv2.resize(frame, (frame_size, frame_height))
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    cv2.imshow('frame', gray)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        cv2.imshow('frame', gray)
 
-    # Размытие фильтром Гаусса
-    gray = cv2.GaussianBlur(gray, (21, 21), 0)
-    cv2.imshow('frame-blur', gray)
+        # Размытие фильтром Гаусса
+        gray = cv2.GaussianBlur(gray, (21, 21), 0)
+        cv2.imshow('frame-blur', gray)
 
-    # Сохранить первый кадр видео
-    if first_frame is None:
-        first_frame = gray
-        continue
+        # Сохранить первый кадр видео
+        if first_frame is None:
+            first_frame = gray
+            continue
 
-    # Определить различия между первым кадром и остальными
-    delta_frame = cv2.absdiff(first_frame, gray)
-    cv2.imshow('frame-delta', delta_frame)
+        # Определить различия между первым кадром и остальными
+        delta_frame = cv2.absdiff(first_frame, gray)
+        cv2.imshow('frame-delta', delta_frame)
 
-    # Преобразовать кадр в оттенках серого в черно-белый
-    thresh_delta = cv2.threshold(delta_frame, 35, 255, cv2.THRESH_BINARY)[1]
+        # Преобразовать кадр в оттенках серого в черно-белый
+        thresh_delta = cv2.threshold(delta_frame, 35, 255, cv2.THRESH_BINARY)[1]
 
-    # Расширить светлые области и сузить темные
-    thresh_delta = cv2.dilate(thresh_delta, None, iterations=2)
-    cv2.imshow('frame-dilate', thresh_delta)
+        # Расширить светлые области и сузить темные
+        thresh_delta = cv2.dilate(thresh_delta, None, iterations=2)
+        cv2.imshow('frame-dilate', thresh_delta)
 
-    # Поиск контуров
-    (cnts, _) = cv2.findContours(thresh_delta.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Поиск контуров
+        (cnts, _) = cv2.findContours(thresh_delta.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Найти максимальное значение площади и выделить объект прямоугольником
-    if cnts:
-        area_max = 0
-        index = 0
-        index_max_area = 0
-        for contour in cnts:
-            area = cv2.contourArea(contour)
-            if area > area_max:
-                area_max = area
-                index_max_area = index
-            index = index + 1
+        # Найти максимальное значение площади и выделить объект прямоугольником
+        if cnts:
+            area_max = 0
+            index = 0
+            index_max_area = 0
+            for contour in cnts:
+                area = cv2.contourArea(contour)
+                if area > area_max:
+                    area_max = area
+                    index_max_area = index
+                index = index + 1
 
-        cnt = cnts[index_max_area]
-        x, y, w, h = cv2.boundingRect(cnt)
-        image = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            cnt = cnts[index_max_area]
+            x, y, w, h = cv2.boundingRect(cnt)
+            image = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-        # Сохранить кадр из видео в png-файл
-        cv2.imwrite(temp_video_dir + 'frame' + str(frame_index) + '.png', image)
+            # Сохранить кадр из видео в png-файл
+            cv2.imwrite(temp_video_dir + 'frame' + str(frame_index) + '.png', image)
 
-        # Сохранить описание кадра в xml-файл
-        create_xml(temp_video_dir + 'frame' + str(frame_index) + '.xml',
-                   temp_video_dir,
-                   str(frame_index) + '.png',
-                   temp_video_dir + 'frame' + str(frame_index) + '.png',
-                   str(frame_size),
-                   str(frame_height),
-                   str(x),
-                   str(y),
-                   str(x + w),
-                   str(y + h)
-                   )
+            # Сохранить описание кадра в xml-файл
+            create_xml(temp_video_dir + 'frame' + str(frame_index) + '.xml',
+                       temp_video_dir,
+                       str(frame_index) + '.png',
+                       temp_video_dir + 'frame' + str(frame_index) + '.png',
+                       str(frame_size),
+                       str(frame_height),
+                       str(x),
+                       str(y),
+                       str(x + w),
+                       str(y + h)
+                       )
 
-        frame_index = frame_index + 1
+            frame_index = frame_index + 1
 
-        cv2.imshow('frame-result', image)
+            cv2.imshow('frame-result', image)
+    else:
+        break
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
