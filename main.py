@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import xml.etree.ElementTree as ET
 
 
 def save_to_file(filename, content):
@@ -12,6 +13,42 @@ def save_to_file(filename, content):
     finally:
         if fh:
             fh.close()
+
+
+def create_xml(filename):
+    annotation = ET.Element('annotation')
+
+    ET.SubElement(annotation, "folder").text = "xgRect"
+    ET.SubElement(annotation, "filename").text = "405.png"
+    ET.SubElement(annotation, "path").text = "/home/coldmoon/Database/logo_qiaowei/xgRect/405.png"
+
+    source = ET.Element("source")
+    ET.SubElement(source, "database").text = "Unknown"
+    annotation.append(source)
+
+    size = ET.Element("size")
+    ET.SubElement(size, "width").text = "850"
+    ET.SubElement(size, "height").text = "480"
+    ET.SubElement(size, "depth").text = "3"
+    annotation.append(size)
+
+    ET.SubElement(annotation, "segmented").text = "0"
+
+    object = ET.Element("object")
+    ET.SubElement(object, "name").text = "widemelon"
+    ET.SubElement(object, "pose").text = "Unspecified"
+    ET.SubElement(object, "truncated").text = "0"
+    ET.SubElement(object, "difficult").text = "0"
+    bndbox = ET.Element("bndbox")
+    ET.SubElement(bndbox, "xmin").text = "657"
+    ET.SubElement(bndbox, "ymin").text = "19"
+    ET.SubElement(bndbox, "xmax").text = "827"
+    ET.SubElement(bndbox, "ymax").text = "74"
+    object.append(bndbox)
+    annotation.append(object)
+
+    tree = ET.ElementTree(annotation)
+    tree.write(filename)
 
 
 first_frame = None
@@ -74,4 +111,5 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
-save_to_file("test.txt", "content")
+create_xml("test.xml")
+
