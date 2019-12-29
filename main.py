@@ -17,20 +17,20 @@ def save_to_file(filename, content):
             fh.close()
 
 
-def create_xml(filename):
+def create_xml(filename, xml_folder, xml_filename, xml_path, xml_size, xml_height, xml_xmin, xml_ymin, xml_xmax, xml_ymax):
     annotation = ET.Element('annotation')
 
-    ET.SubElement(annotation, "folder").text = "xgRect"
-    ET.SubElement(annotation, "filename").text = "405.png"
-    ET.SubElement(annotation, "path").text = "/home/coldmoon/Database/logo_qiaowei/xgRect/405.png"
+    ET.SubElement(annotation, "folder").text = xml_folder
+    ET.SubElement(annotation, "filename").text = xml_filename
+    ET.SubElement(annotation, "path").text = xml_path
 
     source = ET.Element("source")
     ET.SubElement(source, "database").text = "Unknown"
     annotation.append(source)
 
     size = ET.Element("size")
-    ET.SubElement(size, "width").text = "850"
-    ET.SubElement(size, "height").text = "480"
+    ET.SubElement(size, "width").text = xml_size
+    ET.SubElement(size, "height").text = xml_height
     ET.SubElement(size, "depth").text = "3"
     annotation.append(size)
 
@@ -42,10 +42,10 @@ def create_xml(filename):
     ET.SubElement(object, "truncated").text = "0"
     ET.SubElement(object, "difficult").text = "0"
     bndbox = ET.Element("bndbox")
-    ET.SubElement(bndbox, "xmin").text = "657"
-    ET.SubElement(bndbox, "ymin").text = "19"
-    ET.SubElement(bndbox, "xmax").text = "827"
-    ET.SubElement(bndbox, "ymax").text = "74"
+    ET.SubElement(bndbox, "xmin").text = xml_xmin
+    ET.SubElement(bndbox, "ymin").text = xml_ymin
+    ET.SubElement(bndbox, "xmax").text = xml_xmax
+    ET.SubElement(bndbox, "ymax").text = xml_ymax
     object.append(bndbox)
     annotation.append(object)
 
@@ -58,6 +58,8 @@ temp_dir = 'temp/'
 video_name = 'video#1.mp4'
 video = video_dir + video_name
 
+frame_size = 720
+frame_height = 480
 frame_index = 1
 temp_video_dir = temp_dir + video_name + "/"
 if not os.path.exists(temp_video_dir):
@@ -77,7 +79,7 @@ cap = cv2.VideoCapture(video)
 # while True:
 while cap.isOpened():
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (720, 480))
+    frame = cv2.resize(frame, (frame_size, frame_height))
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('frame', gray)
@@ -121,16 +123,28 @@ while cap.isOpened():
         x, y, w, h = cv2.boundingRect(cnt)
         image = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-    cv2.imshow('frame-result', frame)
+        # Сохранить кадр из видео в png-файл
+        cv2.imwrite(temp_video_dir + 'frame' + str(frame_index) + '.png', image)
 
-    # Сохранить кадр из видео в png-файл
-    cv2.imwrite(temp_video_dir + 'frame' + str(frame_index) + '.png', frame)
-    frame_index = frame_index + 1
+        # Сохранить описание кадра в xml-файл
+        create_xml(temp_video_dir + 'frame' + str(frame_index) + '.xml',
+                   temp_video_dir,
+                   str(frame_index) + '.png',
+                   temp_video_dir + 'frame' + str(frame_index) + '.png',
+                   str(frame_size),
+                   str(frame_height),
+                   str(x),
+                   str(y),
+                   str(x + w),
+                   str(y + h)
+                   )
+
+        frame_index = frame_index + 1
+
+        cv2.imshow('frame-result', image)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
 cv2.destroyAllWindows()
-
-create_xml("test.xml")
