@@ -97,36 +97,40 @@ cv2.namedWindow('frame')
 frame_size = 720
 frame_height = 480
 
+N = 10
 videoPath = 'video/video#1.mp4'
 cap = cv2.VideoCapture(videoPath)
 
 is_quit = False
+i = 0
 while cap.isOpened():
     ret, frame = cap.read()
     if frame is not None:
-        frame = cv2.resize(frame, (frame_size, frame_height))
+        i += 1
+        if not (i % N):
+            frame = cv2.resize(frame, (frame_size, frame_height))
 
-        clone_frame = frame.copy()
-        cv2.setMouseCallback('frame', draw_rect)
+            clone_frame = frame.copy()
+            cv2.setMouseCallback('frame', draw_rect)
 
-        while 1:
-            cv2.imshow('frame', clone_frame)
-
-            key = cv2.waitKey(1)
-            if key & 0xFF == ord('q'):
-                is_quit = True
-                break
-            elif key == 32:                         # Нажата клавиша "space"
-                break
-            elif key == 27:                         # Нажата клавиша "ESC"
-                clone_frame = frame.copy()
+            while 1:
                 cv2.imshow('frame', clone_frame)
-                drawing = False
-                draging = False
-                ix, iy = -1, -1
-                jx, jy = -1, -1
-                dx1, dy1, dx2, dy2 = -1, -1, -1, -1
-                rect = (-1, -1, -1, -1)
+
+                key = cv2.waitKey(1)
+                if key & 0xFF == ord('q'):
+                    is_quit = True
+                    break
+                elif key == 32:  # Нажата клавиша "space"
+                    break
+                elif key == 27:  # Нажата клавиша "ESC"
+                    clone_frame = frame.copy()
+                    cv2.imshow('frame', clone_frame)
+                    drawing = False
+                    draging = False
+                    ix, iy = -1, -1
+                    jx, jy = -1, -1
+                    dx1, dy1, dx2, dy2 = -1, -1, -1, -1
+                    rect = (-1, -1, -1, -1)
 
     if is_quit:
         break
