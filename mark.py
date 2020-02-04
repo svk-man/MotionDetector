@@ -1,4 +1,5 @@
 import argparse
+import csv
 import glob
 import os
 import sys
@@ -107,20 +108,32 @@ video_base_name = os.path.basename(video_path)
 video_name = os.path.splitext(video_base_name)[0]
 temp_dir = 'temp/'
 temp_video_dir = temp_dir + video_name + "/"
-if not os.path.exists(temp_video_dir):
-    os.makedirs(temp_video_dir)
+images_dir = "images/"
+
+if not os.path.exists(temp_video_dir + images_dir):
+    os.makedirs(temp_video_dir + images_dir)
 else:
-    # Очистить все файлы в директории
+    # Очистить все файлы в директориях
     files = glob.glob(temp_video_dir + "*")
     for f in files:
-        os.remove(f)
+        if not os.path.isdir(f):
+            os.remove(f)
 
+    files = glob.glob(temp_video_dir + images_dir + "*")
+    for f in files:
+        if not os.path.isdir(f):
+            os.remove(f)
+
+# Загрузка видео
 cap = cv2.VideoCapture(video_path)
+
+# Сформировать заголовок csv-файла с разметкой
+images_list = [['image_id', 'x', 'y', 'w', 'h', 'x+w', 'y+h']]
 
 is_quit = False
 is_first_frame = True
 i = 0
-frameID = 0
+frame_id = 0
 while cap.isOpened():
     ret, frame = cap.read()
     if frame is not None:
@@ -138,7 +151,7 @@ while cap.isOpened():
                 cv2.imshow('frame', clone_frame)
 
                 key = cv2.waitKey(1)
-                if key & 0xFF == ord('q'):
+                if key == 113 or key == 233:  # Нажата клавиша 'q' ('й')
                     is_quit = True
                     break
                 elif key == 32:  # Нажата клавиша "space"
@@ -153,13 +166,26 @@ while cap.isOpened():
                     dx1, dy1, dx2, dy2 = -1, -1, -1, -1
                     rect = (-1, -1, -1, -1)
 
-            # Сохранить размеченный кадр из видео в png-файл
             if rect[2] != -1 and rect[3] != -1:
-                frameID += 1
-                cv2.imwrite(temp_video_dir + 'frame' + str(frameID) + '.jpg', clone_frame)
+                # Сохранить размеченный кадр в jpg-файл
+                frame_id += 1
+                frame_name = 'image' + str(frame_id) + '.jpg'
+                cv2.imwrite(temp_video_dir + images_dir + frame_name, clone_frame)
+
+                # Сохранить информацию о размеченном кадре для csv-файла
+                images_list.append([images_dir + frame_name,  # 'image_id'
+                                    rect[0], rect[1],  # 'x', 'y'
+                                    rect[2] - rect[0], rect[3] - rect[1],  # 'w', 'h'
+                                    rect[2], rect[3]])  # 'x+w', 'y+h'
 
     if is_quit:
         break
 
 cap.release()
 cv2.destroyAllWindows()
+
+# Создать CSV-файл с разметкой и записать в него данные
+csv_file_name = 'mark.csv'
+with open(temp_video_dir + csv_file_name, mode='w', newline='') as csv_file:
+    csv_file_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_NONE)
+    csv_file_writer.writerows(images_list)
