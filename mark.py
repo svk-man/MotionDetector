@@ -1,4 +1,5 @@
 import argparse
+import glob
 import os
 import sys
 
@@ -98,12 +99,28 @@ frame_size = 720
 frame_height = 480
 
 N = 10
-videoPath = 'video/video#1.mp4'
-cap = cv2.VideoCapture(videoPath)
+
+video_path = 'video/video#1.mp4'
+
+# Создать директорию с файлами разметки для заданного видео
+video_base_name = os.path.basename(video_path)
+video_name = os.path.splitext(video_base_name)[0]
+temp_dir = 'temp/'
+temp_video_dir = temp_dir + video_name + "/"
+if not os.path.exists(temp_video_dir):
+    os.makedirs(temp_video_dir)
+else:
+    # Очистить все файлы в директории
+    files = glob.glob(temp_video_dir + "*")
+    for f in files:
+        os.remove(f)
+
+cap = cv2.VideoCapture(video_path)
 
 is_quit = False
 is_first_frame = True
 i = 0
+frameID = 0
 while cap.isOpened():
     ret, frame = cap.read()
     if frame is not None:
@@ -135,6 +152,9 @@ while cap.isOpened():
                     jx, jy = -1, -1
                     dx1, dy1, dx2, dy2 = -1, -1, -1, -1
                     rect = (-1, -1, -1, -1)
+
+            # Сохранить кадр в файл
+
 
     if is_quit:
         break
