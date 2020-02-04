@@ -51,8 +51,11 @@ def draw_rect(event, x, y, flags, param):
     global drawing, draging, ix, iy, jx, jy, dx1, dy1, dx2, dy2, frame, clone_frame, rect
     jx, jy = x, y
 
+    if event == cv2.EVENT_LBUTTONDBLCLK:
+        draging = True
+
     if event == cv2.EVENT_LBUTTONDOWN:
-        if (not draging) and (rect[0] <= x <= rect[2] and rect[1] <= y <= rect[3]):
+        if (not draging) and (rect[0] <= x <= rect[4] and rect[1] <= y <= rect[5]):
             drawing = True
             draging = True
             dx1, dy1 = x, y
@@ -67,19 +70,26 @@ def draw_rect(event, x, y, flags, param):
                 cv2.rectangle(clone_frame, (ix, iy), (jx, jy), (0, 255, 0), 2)
             else:
                 cv2.rectangle(clone_frame, (rect[0] + x - dx1, rect[1] + y - dy1),
-                              (rect[2] + x - dx1, rect[3] + y - dy1), (0, 255, 0), 2)
+                              (rect[4] + x - dx1, rect[5] + y - dy1), (0, 255, 0), 2)
 
     if event == cv2.EVENT_LBUTTONUP:
         if ix != -1 and iy != -1:
             clone_frame = frame.copy()
             if not draging:
-                cv2.rectangle(clone_frame, (ix, iy), (jx, jy), (0, 255, 0), 2)
-                rect = (ix, iy, jx, jy)
+                if ix != jx and iy != jy:
+                    cv2.rectangle(clone_frame, (ix, iy), (jx, jy), (0, 255, 0), 2)
+                    x1, y1, x2, y2 = min(ix, jx), min(iy, jy), max(ix, jx), max(iy, jy)
+                    w, h = x2 - x1, y2 - y1
+                    rect = (x1, y1, w, h, x2, y2)
+                else:
+                    rect = (-1, -1, -1, -1, -1, -1)
             else:
-                cv2.rectangle(clone_frame, (rect[0] + x - dx1, rect[1] + y - dy1),
-                              (rect[2] + x - dx1, rect[3] + y - dy1),
-                              (0, 255, 0), 2)
-                rect = (rect[0] + x - dx1, rect[1] + y - dy1, rect[2] + x - dx1, rect[3] + y - dy1)
+                x1, y1 = min(rect[0] + x - dx1, rect[4] + x - dx1), min(rect[1] + y - dy1, rect[5] + y - dy1)
+                x2, y2 = max(rect[0] + x - dx1, rect[4] + x - dx1), max(rect[1] + y - dy1, rect[5] + y - dy1)
+                w, h = rect[2], rect[3]
+                cv2.rectangle(clone_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                rect = (x1, y1, w, h, x2, y2)
+                print(rect)
             drawing = False
             draging = False
 
@@ -89,7 +99,7 @@ draging = False
 ix, iy = -1, -1
 jx, jy = -1, -1
 dx1, dy1, dx2, dy2 = -1, -1, -1, -1
-rect = (-1, -1, -1, -1)
+rect = (-1, -1, -1, -1, -1, -1)
 
 cv2.namedWindow('frame')
 
@@ -137,8 +147,8 @@ while cap.isOpened():
             clone_frame = frame.copy()
             cv2.setMouseCallback('frame', draw_rect)
             is_first_frame = False
-            if rect[2] != -1 and rect[3] != -1:
-                cv2.rectangle(clone_frame, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 2)
+            if rect[4] != -1 and rect[5] != -1:
+                cv2.rectangle(clone_frame, (rect[0], rect[1]), (rect[4], rect[5]), (0, 255, 0), 2)
 
             while 1:
                 cv2.imshow('frame', clone_frame)
@@ -157,7 +167,7 @@ while cap.isOpened():
                     ix, iy = -1, -1
                     jx, jy = -1, -1
                     dx1, dy1, dx2, dy2 = -1, -1, -1, -1
-                    rect = (-1, -1, -1, -1)
+                    rect = (-1, -1, -1, -1, -1, -1)
 
             if rect[2] != -1 and rect[3] != -1:
                 # Сохранить размеченный кадр в jpg-файл
@@ -166,10 +176,10 @@ while cap.isOpened():
                 cv2.imwrite(temp_video_dir + images_dir + frame_name, clone_frame)
 
                 # Сохранить информацию о размеченном кадре для csv-файла
-                images_list.append([images_dir + frame_name,  # 'image_id'
+                images_list.append([images_dir + frame_name,  # q
                                     rect[0], rect[1],  # 'x', 'y'
-                                    rect[2] - rect[0], rect[3] - rect[1],  # 'w', 'h'
-                                    rect[2], rect[3]])  # 'x+w', 'y+h'
+                                    rect[2], rect[3],  # 'w', 'h'
+                                    rect[4], rect[5]])  # 'x+w', 'y+h'
 
     if is_quit:
         break
