@@ -89,7 +89,6 @@ def draw_rect(event, x, y, flags, param):
                 w, h = rect[2], rect[3]
                 cv2.rectangle(clone_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 rect = (x1, y1, w, h, x2, y2)
-                print(rect)
             drawing = False
             draging = False
 
@@ -169,7 +168,7 @@ while cap.isOpened():
                     dx1, dy1, dx2, dy2 = -1, -1, -1, -1
                     rect = (-1, -1, -1, -1, -1, -1)
 
-            if rect[2] != -1 and rect[3] != -1:
+            if not is_quit and rect[2] != -1 and rect[3] != -1:
                 # Сохранить размеченный кадр в jpg-файл
                 frame_id += 1
                 frame_name = 'image' + str(frame_id) + '.jpg'
