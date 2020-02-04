@@ -153,8 +153,10 @@ while cap.isOpened():
                     dx1, dy1, dx2, dy2 = -1, -1, -1, -1
                     rect = (-1, -1, -1, -1)
 
-            # Сохранить кадр в файл
-
+            # Сохранить размеченный кадр из видео в png-файл
+            if rect[2] != -1 and rect[3] != -1:
+                frameID += 1
+                cv2.imwrite(temp_video_dir + 'frame' + str(frameID) + '.jpg', clone_frame)
 
     if is_quit:
         break
