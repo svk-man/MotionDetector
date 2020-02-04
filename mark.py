@@ -102,6 +102,7 @@ videoPath = 'video/video#1.mp4'
 cap = cv2.VideoCapture(videoPath)
 
 is_quit = False
+is_first_frame = True
 i = 0
 while cap.isOpened():
     ret, frame = cap.read()
@@ -112,6 +113,9 @@ while cap.isOpened():
 
             clone_frame = frame.copy()
             cv2.setMouseCallback('frame', draw_rect)
+            is_first_frame = False
+            if rect[2] != -1 and rect[3] != -1:
+                cv2.rectangle(clone_frame, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 2)
 
             while 1:
                 cv2.imshow('frame', clone_frame)
