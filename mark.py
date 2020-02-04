@@ -3,10 +3,10 @@ import csv
 import glob
 import os
 import sys
-
 import cv2
 
-'''def validate(video_path, n):
+
+def validate(video_path, n):
     message = ''
     if not os.path.isfile(video_path):
         message = 'Указанный путь к видео не существует'
@@ -18,9 +18,9 @@ import cv2
 
 
 parser_desc = 'Консольная утилита для разметки видео для проекта с мыше-крысами. Язык - Python 3.7+, основная либа - ' \
-             'OpenCV.\n' \
-             'пример вызова:' \
-             'python mark.py "video/clip1.avi" 10'
+              'OpenCV.\n' \
+              'пример вызова:' \
+              'python mark.py "video/clip1.avi" 10'
 
 parser = argparse.ArgumentParser(prog='mark',
                                  description=parser_desc)
@@ -45,9 +45,6 @@ error_message = validate(video_path, n)
 if error_message:
     print(error_message)
     sys.exit()
-
-print(video_path)
-print(n)'''
 
 
 def draw_rect(event, x, y, flags, param):
@@ -99,10 +96,6 @@ cv2.namedWindow('frame')
 frame_size = 720
 frame_height = 480
 
-N = 10
-
-video_path = 'video/video#1.mp4'
-
 # Создать директорию с файлами разметки для заданного видео
 video_base_name = os.path.basename(video_path)
 video_name = os.path.splitext(video_base_name)[0]
@@ -138,7 +131,7 @@ while cap.isOpened():
     ret, frame = cap.read()
     if frame is not None:
         i += 1
-        if not (i % N):
+        if not (i % n):
             frame = cv2.resize(frame, (frame_size, frame_height))
 
             clone_frame = frame.copy()
