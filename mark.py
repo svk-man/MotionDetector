@@ -102,8 +102,8 @@ rect = (-1, -1, -1, -1, -1, -1)
 
 cv2.namedWindow('frame')
 
-frame_size = 720
-frame_height = 480
+#frame_size = 720
+#frame_height = 480
 
 # Создать директорию с файлами разметки для заданного видео
 video_base_name = os.path.basename(video_path)
@@ -141,7 +141,7 @@ while cap.isOpened():
     if frame is not None:
         i += 1
         if not (i % n):
-            frame = cv2.resize(frame, (frame_size, frame_height))
+            #frame = cv2.resize(frame, (frame_size, frame_height))
 
             clone_frame = frame.copy()
             cv2.setMouseCallback('frame', draw_rect)
