@@ -8,11 +8,8 @@ from os.path import join
 
 def validate(video_path, n):
     message = ''
-    if not os.path.isfile(video_path):
-        if not os.path.isdir(video_path):
-            message = 'Указанная директория с видеофайлами не существует'
-        else:
-            message = 'Указанный путь к видео не существует'
+    if not os.path.isfile(video_path) and not os.path.isdir(video_path):
+        message = 'Указанный путь к видео не существует'
 
     if n <= 0:
         message = 'N не может быть отрицательным числом'
