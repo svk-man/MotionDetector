@@ -134,3 +134,5 @@ yolo/yolov3.weights
 yolo/yolov3-tiny.weights
 
 .temp
+test_labels.csv
+train_labels.csv
