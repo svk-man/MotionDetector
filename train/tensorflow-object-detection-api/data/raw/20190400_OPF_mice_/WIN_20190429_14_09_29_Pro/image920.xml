@@ -1,0 +1,26 @@
+<annotation>
+	<folder>images</folder>
+	<filename>image920.jpg</filename>
+	<path>C:\Users\kravc\Desktop\Магистерская диссертация\Видео и разметка\20190400_OPF_mice_\WIN_20190429_14_09_29_Pro\images\image920.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1920</width>
+		<height>1080</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>mouse</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>845</xmin>
+			<ymin>320</ymin>
+			<xmax>1034</xmax>
+			<ymax>378</ymax>
+		</bndbox>
+	</object>
+</annotation>
