@@ -4,7 +4,7 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 def xml_to_csv(path, type_directory):
     xml_list = []
-    path_core = path[path.find("data/" + type_directory):None] + '/images/'
+    path_core = "/content/gdrive/My Drive/train/models/research/object_detection/" + path[path.find("data/" + type_directory):None] + '/images/'
     for xml_file in glob.glob(path + '/*.xml'):
         tree = ET.parse(xml_file)
         root = tree.getroot()
