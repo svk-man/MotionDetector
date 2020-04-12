@@ -4,7 +4,7 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 def xml_to_csv(path, type_directory):
     xml_list = []
-    path_core = "/content/gdrive/My Drive/train/models/research/object_detection/" + path[path.find("data/" + type_directory):None] + '/images/'
+    path_core = path[path.find('data/{}'.format(type_directory)):None] + '/images/'
     for xml_file in glob.glob(path + '/*.xml'):
         tree = ET.parse(xml_file)
         root = tree.getroot()
@@ -37,7 +37,10 @@ def save_sml_to_csv(df, csv_path, sep=","):
 
 def main(directory_list):
     for Image_cat in directory_list:
+        xml_file_name = 'data/{}_labels.csv'.format(Image_cat)
         image_path = os.path.join(os.getcwd(), 'data/{}'.format(Image_cat))
+        if os.path.exists(xml_file_name):
+            os.remove(xml_file_name)
         print(image_path)
         for i in os.walk(image_path):
             if i[2]:
@@ -47,7 +50,7 @@ def main(directory_list):
                 print(i[2])
                 print()
                 xml_df = xml_to_csv(i[0], Image_cat)
-                save_sml_to_csv(xml_df, 'data/{}_labels.csv'.format(Image_cat))
+                save_sml_to_csv(xml_df, xml_file_name)
 
         print('Successfully converted xml to csv.')
 
