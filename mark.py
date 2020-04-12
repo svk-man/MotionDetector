@@ -108,7 +108,7 @@ cv2.namedWindow('frame')
 # Создать директорию с файлами разметки для заданного видео
 video_base_name = os.path.basename(video_path)
 video_name = os.path.splitext(video_base_name)[0]
-temp_dir = 'temp/'
+temp_dir = ''
 temp_video_dir = temp_dir + video_name + "/"
 images_dir = "images/"
 
@@ -146,27 +146,31 @@ while cap.isOpened():
             clone_frame = frame.copy()
             cv2.setMouseCallback('frame', draw_rect)
             is_first_frame = False
-            if rect[4] != -1 and rect[5] != -1:
-                cv2.rectangle(clone_frame, (rect[0], rect[1]), (rect[4], rect[5]), (0, 255, 0), 2)
+            frame_id += 1
+            frame_name = 'image' + str(frame_id) + '.jpg'
+            cv2.imwrite(temp_video_dir + images_dir + frame_name, clone_frame)
 
-            while 1:
-                cv2.imshow('frame', clone_frame)
-
-                key = cv2.waitKey(1)
-                if key == 113 or key == 233:  # Нажата клавиша 'q' ('й')
-                    is_quit = True
-                    break
-                elif key == 32:  # Нажата клавиша "space"
-                    break
-                elif key == 27:  # Нажата клавиша "ESC"
-                    clone_frame = frame.copy()
-                    cv2.imshow('frame', clone_frame)
-                    drawing = False
-                    draging = False
-                    ix, iy = -1, -1
-                    jx, jy = -1, -1
-                    dx1, dy1, dx2, dy2 = -1, -1, -1, -1
-                    rect = (-1, -1, -1, -1, -1, -1)
+            # if rect[4] != -1 and rect[5] != -1:
+            #     cv2.rectangle(clone_frame, (rect[0], rect[1]), (rect[4], rect[5]), (0, 255, 0), 2)
+            #
+            # while 1:
+            #     cv2.imshow('frame', clone_frame)
+            #
+            #     key = cv2.waitKey(1)
+            #     if key == 113 or key == 233:  # Нажата клавиша 'q' ('й')
+            #         is_quit = True
+            #         break
+            #     elif key == 32:  # Нажата клавиша "space"
+            #         break
+            #     elif key == 27:  # Нажата клавиша "ESC"
+            #         clone_frame = frame.copy()
+            #         cv2.imshow('frame', clone_frame)
+            #         drawing = False
+            #         draging = False
+            #         ix, iy = -1, -1
+            #         jx, jy = -1, -1
+            #         dx1, dy1, dx2, dy2 = -1, -1, -1, -1
+            #         rect = (-1, -1, -1, -1, -1, -1)
 
             if not is_quit and rect[2] != -1 and rect[3] != -1:
                 # Сохранить размеченный кадр в jpg-файл
@@ -179,7 +183,8 @@ while cap.isOpened():
                                     rect[0], rect[1],  # 'x', 'y'
                                     rect[2], rect[3],  # 'w', 'h'
                                     rect[4], rect[5]])  # 'x+w', 'y+h'
-
+    else:
+        break
     if is_quit:
         break
 
@@ -187,7 +192,7 @@ cap.release()
 cv2.destroyAllWindows()
 
 # Создать CSV-файл с разметкой и записать в него данные
-csv_file_name = 'mark.csv'
-with open(temp_video_dir + csv_file_name, mode='w', newline='') as csv_file:
-    csv_file_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_NONE)
-    csv_file_writer.writerows(images_list)
+# csv_file_name = 'mark.csv'
+# with open(temp_video_dir + csv_file_name, mode='w', newline='') as csv_file:
+#     csv_file_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_NONE)
+#     csv_file_writer.writerows(images_list)

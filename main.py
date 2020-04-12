@@ -17,7 +17,8 @@ def save_to_file(filename, content):
             fh.close()
 
 
-def create_xml(filename, xml_folder, xml_filename, xml_path, xml_size, xml_height, xml_xmin, xml_ymin, xml_xmax, xml_ymax):
+def create_xml(filename, xml_folder, xml_filename, xml_path, xml_size, xml_height, xml_xmin, xml_ymin, xml_xmax,
+               xml_ymax):
     annotation = ET.Element('annotation')
 
     ET.SubElement(annotation, "folder").text = xml_folder
