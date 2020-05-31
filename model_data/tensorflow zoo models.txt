@@ -1,0 +1,16 @@
+Модели
+https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
+
+ssd_mobiledet_cpu_coco
+http://download.tensorflow.org/models/object_detection/ssdlite_mobiledet_cpu_320x320_coco_2020_05_19.tar.gz
+
+ssd_mobilenet_v2_mnasfpn_coco
+http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_mnasfpn_shared_box_predictor_320x320_coco_sync_2020_05_18.tar.gz
+
+ssd_mobilenetv2_oidv4
+http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_oid_v4_2018_12_12.tar.gz
+
+
+Конфиги
+https://github.com/tensorflow/models/tree/master/research/object_detection/samples/configs
+
