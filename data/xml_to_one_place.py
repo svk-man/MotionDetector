@@ -1,6 +1,7 @@
 import os
 import glob
 import pandas as pd
+import numpy as np
 import xml.etree.ElementTree as ET
 import albumentations as A
 import cv2
@@ -65,57 +66,65 @@ def main(directory_list):
         label_fields=['field_id']
     )
 
-    dataset_path = 'data/augmented/data'
-    os.makedirs(dataset_path, exist_ok=True)
+    photos_path = "../train/tensorflow-object-detection-api/Photos"
+    labels_path = "../train/tensorflow-object-detection-api/Labels"
+    os.makedirs(photos_path, exist_ok=True)
+    os.makedirs(labels_path, exist_ok=True)
 
+    image_index = 0
     for images_dir in directory_list:
+        print("\nMain folder: " + images_dir)
         images_path = os.path.join(os.getcwd(), 'data/{}'.format(images_dir))
 
         # Пройти по всем папкам и найти images и их xmls
         images_list = []
         for i in os.walk(images_path):
             if i[2]:
-                print("Folder: ")
-                print(i[0])
-                print("with files:")
-                print(i[2])
-                print()
+                #print("Folder: ")
+                #print(i[0])
+                #print("with files:")
+                #print(i[2])
+                #print()
                 path = i[0]
                 path_core = path[path.find(images_path):None] + "/"
                 for image_name in i[2]:
                     if image_name.lower().endswith(('.png', '.jpg', '.jpeg')):
                         images_list.append(path_core.replace('\\', '/') + image_name)
 
+        images_count = len(images_list)
+        i = 0
+        is_cyrillic_path = False
         for image_path in images_list:
             image = cv2.imread(image_path)
+            if image is None:
+                f = open(image_path, "rb")
+                chunk = f.read()
+                chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
+                image = cv2.imdecode(chunk_arr, cv2.IMREAD_COLOR)
+                is_cyrillic_path = True
             image_name = os.path.basename(image_path)
             image_ext = os.path.splitext(image_path)[1]
             xml_path = image_path.replace(image_ext, '.xml')
             animal_id_bbox = read_bbox_from_xml(xml_path)
             # show_image(image, bbox=animal_id_bbox)
 
-            # Аугментировать изображение
-            augmentation = A.Compose([
-                A.RandomSizedBBoxSafeCrop(width=640, height=640, erosion_rate=0.0, interpolation=1, always_apply=True, p=1.0)
-            ], bbox_params=bbox_params)
+            if not is_cyrillic_path:
+                cv2.imwrite(photos_path + '/image_' + str(image_index) + image_ext, image)
+            else:
+                is_success, im_buf_arr = cv2.imencode(image_ext, image)
+                im_buf_arr.tofile(photos_path + '/image_' + str(image_index) + image_ext)
 
-            augmented = augmentation(image=image, bboxes=[animal_id_bbox], field_id=['1'])
-            # show_image(augmented['image'], augmented['bboxes'][0])
-
-            image_path_core = image_path[image_path.find('data/{}'.format(images_dir)):None]
-            image_path_core = image_path_core.replace('data/{}'.format(images_dir), images_dir)
-            augmented_path = dataset_path + '/' + image_path_core.replace('\\', '/')
-
-            os.makedirs(os.path.split(augmented_path)[0], exist_ok=True)
-            cv2.imwrite(augmented_path, augmented['image'])
-
-            writer = Writer(augmented_path, 640, 640)
-            bbox_coords = augmented['bboxes'][0]
+            writer = Writer(photos_path + '/image_' + str(image_index) + image_ext, 300, 300)
             bbox_class = read_class_from_xml(xml_path)
-            writer.addObject(bbox_class, bbox_coords[0], bbox_coords[1], bbox_coords[2], bbox_coords[3])
-            writer.save(augmented_path.replace(image_ext, '.xml'))
+            writer.addObject(bbox_class, animal_id_bbox[0], animal_id_bbox[1], animal_id_bbox[2], animal_id_bbox[3])
+            writer.save(labels_path + '/xml_' + str(image_index) + '.xml')
+            image_index += 1
 
-    print('Successfully augmentated images.')
+            progress = (i * 100) / images_count
+            print("Progress: " + "%.2f" % progress + "%")
+            i += 1
+
+    print('\nSuccessfully translated images.')
 
 
 main(['train', 'test'])
