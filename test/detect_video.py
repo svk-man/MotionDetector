@@ -17,9 +17,9 @@ from io import StringIO
 from matplotlib import pyplot as plt
 from PIL import Image
 
-from utils import label_map_util
+from object_detection.utils import label_map_util
 
-from utils import visualization_utils as vis_util
+from object_detection.utils import visualization_utils as vis_util
 
 import cv2
 
@@ -50,6 +50,8 @@ def detect_in_video():
             serialized_graph = fid.read()
             od_graph_def.ParseFromString(serialized_graph)
             tf.import_graph_def(od_graph_def, name='')
+        configuration = tf.ConfigProto(device_count={"GPU": 0})
+        sess = tf.Session(config=configuration, graph=detection_graph)
 
     label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
     categories = label_map_util.convert_label_map_to_categories(
@@ -74,7 +76,7 @@ def detect_in_video():
             num_detections = detection_graph.get_tensor_by_name(
                 'num_detections:0')
             cap = cv2.VideoCapture('../temp/' + 'WIN_20191218_11_03_57_Pro.mp4')
-
+            i = 0
             while(cap.isOpened()):
                 # Read the frame
                 ret, frame = cap.read()
@@ -85,16 +87,16 @@ def detect_in_video():
                 color_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
                 image_np_expanded = np.expand_dims(color_frame, axis=0)
-
+                if i >= 500:
                 # Actual detection.
-                (boxes, scores, classes, num) = sess.run(
+                    (boxes, scores, classes, num) = sess.run(
                     [detection_boxes, detection_scores,
                         detection_classes, num_detections],
                     feed_dict={image_tensor: image_np_expanded})
 
                 # Visualization of the results of a detection.
                 # note: perform the detections using a higher threshold
-                vis_util.visualize_boxes_and_labels_on_image_array(
+                    vis_util.visualize_boxes_and_labels_on_image_array(
                     color_frame,
                     np.squeeze(boxes),
                     np.squeeze(classes).astype(np.int32),
@@ -104,9 +106,10 @@ def detect_in_video():
                     line_thickness=8,
                     min_score_thresh=.20)
 
-                cv2.imshow('frame', color_frame)
+                cv2.imshow('frame', cv2.resize(color_frame, (800,600)))
                 output_rgb = cv2.cvtColor(color_frame, cv2.COLOR_RGB2BGR)
                 #out.write(output_rgb)
+                i += 1
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break

@@ -67,8 +67,10 @@ def main(directory_list):
         label_fields=['field_id']
     )
 
-    dataset_path = '../train/tensorflow-object-detection-api/data/augmented/data'
-    os.makedirs(dataset_path, exist_ok=True)
+    dataset_dir = '../train/tensorflow-object-detection-api/data/augmented/data'
+    augmented_dir = 'data/augmented'
+    os.makedirs(dataset_dir, exist_ok=True)
+    os.makedirs(augmented_dir, exist_ok=True)
 
     for images_dir in directory_list:
         print("\nMain folder: " + images_dir)
@@ -110,19 +112,19 @@ def main(directory_list):
             # Аугментировать изображение
             augmentation_orig = A.Compose(
                 [
-                    A.RandomSizedBBoxSafeCrop(300, 300, erosion_rate=0.0, interpolation=1, always_apply=True, p=1.0),
+                    A.RandomSizedBBoxSafeCrop(640, 640, erosion_rate=0.0, interpolation=1, always_apply=True, p=1.0),
                 ],
                 bbox_params=bbox_params
             )
 
             augmentation = A.Compose(
                 [
-                    A.RandomSizedBBoxSafeCrop(300, 300, erosion_rate=0.0, interpolation=1, always_apply=True, p=1.0),
+                    A.RandomSizedBBoxSafeCrop(640, 640, erosion_rate=0.0, interpolation=1, always_apply=True, p=1.0),
                     A.VerticalFlip(always_apply=False, p=0.5),
                     A.HorizontalFlip(always_apply=False, p=0.5),
                     A.Flip(always_apply=False, p=0.5),
                     A.Transpose(always_apply=False, p=0.5),
-                    A.RandomGamma(gamma_limit=(120, 150), eps=None, always_apply=False, p=0.25),
+                    A.RandomGamma(gamma_limit=(120, 150), eps=None, always_apply=False, p=0.75),
                     A.RandomRotate90(always_apply=False, p=0.5),
                     A.Rotate(limit=(-360, 360), interpolation=1, border_mode=1, value=None, mask_value=None,
                              always_apply=False, p=0.5),
@@ -136,14 +138,14 @@ def main(directory_list):
                         A.HueSaturationValue(hue_shift_limit=(-15, 15), sat_shift_limit=(-15, 15),
                                              val_shift_limit=(-15, 15), always_apply=False, p=0.5),
                         A.RGBShift(r_shift_limit=3, g_shift_limit=5, b_shift_limit=5, always_apply=False, p=0.5)
-                    ], p=0.25),
+                    ], p=0.75),
                     A.OneOf([
                         A.RandomBrightness(limit=0.1, always_apply=False, p=0.5),
                         A.RandomContrast(limit=0.1, always_apply=False, p=0.5),
                         A.RandomBrightnessContrast(brightness_limit=0.1,
                                                    contrast_limit=0.1, brightness_by_max=False,
                                                    always_apply=False, p=0.5),
-                    ], p=0.5)
+                    ], p=0.75)
                 ],
                 bbox_params=bbox_params
             )
@@ -161,7 +163,7 @@ def main(directory_list):
                 image_path_core = image_path[image_path.find('data/{}'.format(images_dir)):None]
                 image_path_core = image_path_core.replace('data/{}'.format(images_dir), images_dir)
                 image_path_core = image_path_core.replace(image_ext, '_' + str(k) + image_ext)
-                augmented_path = dataset_path + '/' + image_path_core.replace('\\', '/')
+                augmented_path = augmented_dir + '/' + dataset_dir + '/' + image_path_core.replace('\\', '/')
 
                 os.makedirs(os.path.split(augmented_path)[0], exist_ok=True)
                 if not is_cyrillic_path:
@@ -170,7 +172,7 @@ def main(directory_list):
                     is_success, im_buf_arr = cv2.imencode(image_ext, augmented['image'])
                     im_buf_arr.tofile(augmented_path)
 
-                writer = Writer(augmented_path, 300, 300)
+                writer = Writer(augmented_path, 640, 640)
                 bbox_coords = augmented['bboxes'][0]
                 bbox_class = read_class_from_xml(xml_path)
                 writer.addObject(bbox_class, bbox_coords[0], bbox_coords[1], bbox_coords[2], bbox_coords[3])
