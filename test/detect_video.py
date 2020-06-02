@@ -75,8 +75,7 @@ def detect_in_video():
                 'detection_classes:0')
             num_detections = detection_graph.get_tensor_by_name(
                 'num_detections:0')
-            cap = cv2.VideoCapture('../temp/' + 'WIN_20191218_11_03_57_Pro.mp4')
-            i = 0
+            cap = cv2.VideoCapture('../temp/' + 'WIN_20190429_14_09_29_Pro.mp4')
             while(cap.isOpened()):
                 # Read the frame
                 ret, frame = cap.read()
@@ -87,29 +86,28 @@ def detect_in_video():
                 color_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
                 image_np_expanded = np.expand_dims(color_frame, axis=0)
-                if i >= 500:
                 # Actual detection.
-                    (boxes, scores, classes, num) = sess.run(
+                (boxes, scores, classes, num) = sess.run(
                     [detection_boxes, detection_scores,
                         detection_classes, num_detections],
                     feed_dict={image_tensor: image_np_expanded})
 
                 # Visualization of the results of a detection.
                 # note: perform the detections using a higher threshold
-                    vis_util.visualize_boxes_and_labels_on_image_array(
-                    color_frame,
-                    np.squeeze(boxes),
-                    np.squeeze(classes).astype(np.int32),
-                    np.squeeze(scores),
-                    category_index,
-                    use_normalized_coordinates=True,
-                    line_thickness=8,
-                    min_score_thresh=.20)
+                vis_util.visualize_boxes_and_labels_on_image_array(
+                        color_frame,
+                        np.squeeze(boxes[0]),
+                        np.squeeze(classes[0]).astype(np.int32),
+                        np.squeeze(scores[0]),
+                        category_index,
+                        use_normalized_coordinates=True,
+                        line_thickness=8,
+                        max_boxes_to_draw=1,
+                        min_score_thresh=.20)
 
                 cv2.imshow('frame', cv2.resize(color_frame, (800,600)))
                 output_rgb = cv2.cvtColor(color_frame, cv2.COLOR_RGB2BGR)
                 #out.write(output_rgb)
-                i += 1
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
