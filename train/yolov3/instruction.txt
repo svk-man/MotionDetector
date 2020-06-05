@@ -1,24 +1,63 @@
 repo: https://github.com/pythonlessons/TensorFlow-2.x-YOLOv3
+repo: https://github.com/qqwweee/keras-yolo3
+repo: https://pylessons.com/YOLOv3-custom-training/
 
 1
-conda create --name yolov3
+cd C:\MotionDetector\train\yolov3
 
 2
-conda activate yolov3
+conda create --name yolov3
 
 3
-conda install python=3.6.8
+conda activate yolov3
 
 4
-pip install -r ./requirements.txt
+conda install python=3.6.8
 
 5
-pip install opencv-python==4.1.2.30
+pip install -r ./requirements.txt
 
 6
-# yolov3
-wget --no-check-certificate -P ../model_data https://pjreddie.com/media/files/yolov3.weights
+pip install opencv-python==4.1.2.30
 
 7
+# yolov3
+wget --no-check-certificate -P ../../model_data https://pjreddie.com/media/files/yolov3.weights
+
+8
 # yolov3-tiny
-wget --no-check-certificate -P ../model_data https://pjreddie.com/media/files/yolov3-tiny.weights
+wget --no-check-certificate -P ../../model_data https://pjreddie.com/media/files/yolov3-tiny.weights
+
+9
+collect data: train and test
+
+10
+python ../../data/xml_to_yolov3.py
+
+11
+edit yolov3 /configs.py
+
+12
+train_bottleneck.py:
+Choose this method if you train on CPU, or want to train model faster (lower accuracy model). Required a lot of RAM and HDD space.
+
+train.py:
+Choose this method if you train on GPU.
+
+If using train.py:
+Line 19. Change annotation_path to your file (learned to generate them in previous tutorial).
+Line 20. Change log_dir, directory where to save trained model and checkpoints.
+Line 21. Change classes_path to your classes file (learned to generate them in previous tutorial).
+Line 22. anchors_path, don't change this if you don't know what you are doing.
+Line 34. If training new model, leave it as it is "weights_path='model_data/yolo_weights.h5'", otherwise link your checkpoint.
+Line 57. batch_size = 32, try to train with this, if you receive some kind of memory error, decrease this number.
+Line 76. batch_size = 8, same as in Line 57. I tried to train with gtx1080ti, received memory error while using "batch_size = 32", was able to train with 8.
+Lines 63,64 82, 83. Increase epochs count for better model accuracy.
+If using train_bottleneck.py:
+Line 19. Change annotation_path to your file (learned to generate them in previous tutorial).
+Line 20. Change log_dir, directory where to save trained model and checkpoints.
+Line 21. Change classes_path to your classes file (learned to generate them in previous tutorial).
+Line 22. anchors_path, don't change this if you don't know what you are doing.
+Line 30. If training new model, leave it as it is "weights_path='model_data/yolo_weights.h5'", otherwise link your checkpoint.
+Lines 72,73 86, 87, 105, 106. Increase epochs count for better model accuracy.
+After finishing training in your logs file there should be created new "trained_weights_final.h5" model file. This will be used for custom detection.
