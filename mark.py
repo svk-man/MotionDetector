@@ -102,8 +102,8 @@ rect = (-1, -1, -1, -1, -1, -1)
 
 cv2.namedWindow('frame')
 
-#frame_size = 720
-#frame_height = 480
+frame_size = 720
+frame_height = 480
 
 # Создать директорию с файлами разметки для заданного видео
 video_base_name = os.path.basename(video_path)
@@ -141,7 +141,7 @@ while cap.isOpened():
     if frame is not None:
         i += 1
         if not (i % n):
-            #frame = cv2.resize(frame, (frame_size, frame_height))
+            frame = cv2.resize(frame, (frame_size, frame_height))
 
             clone_frame = frame.copy()
             cv2.setMouseCallback('frame', draw_rect)
@@ -150,27 +150,27 @@ while cap.isOpened():
             frame_name = 'image' + str(frame_id) + '.jpg'
             cv2.imwrite(temp_video_dir + images_dir + frame_name, clone_frame)
 
-            # if rect[4] != -1 and rect[5] != -1:
-            #     cv2.rectangle(clone_frame, (rect[0], rect[1]), (rect[4], rect[5]), (0, 255, 0), 2)
-            #
-            # while 1:
-            #     cv2.imshow('frame', clone_frame)
-            #
-            #     key = cv2.waitKey(1)
-            #     if key == 113 or key == 233:  # Нажата клавиша 'q' ('й')
-            #         is_quit = True
-            #         break
-            #     elif key == 32:  # Нажата клавиша "space"
-            #         break
-            #     elif key == 27:  # Нажата клавиша "ESC"
-            #         clone_frame = frame.copy()
-            #         cv2.imshow('frame', clone_frame)
-            #         drawing = False
-            #         draging = False
-            #         ix, iy = -1, -1
-            #         jx, jy = -1, -1
-            #         dx1, dy1, dx2, dy2 = -1, -1, -1, -1
-            #         rect = (-1, -1, -1, -1, -1, -1)
+            if rect[4] != -1 and rect[5] != -1:
+                cv2.rectangle(clone_frame, (rect[0], rect[1]), (rect[4], rect[5]), (0, 255, 0), 2)
+
+            while 1:
+                cv2.imshow('frame', clone_frame)
+
+                key = cv2.waitKey(1)
+                if key == 113 or key == 233:  # Нажата клавиша 'q' ('й')
+                    is_quit = True
+                    break
+                elif key == 32:  # Нажата клавиша "space"
+                    break
+                elif key == 27:  # Нажата клавиша "ESC"
+                    clone_frame = frame.copy()
+                    cv2.imshow('frame', clone_frame)
+                    drawing = False
+                    draging = False
+                    ix, iy = -1, -1
+                    jx, jy = -1, -1
+                    dx1, dy1, dx2, dy2 = -1, -1, -1, -1
+                    rect = (-1, -1, -1, -1, -1, -1)
 
             if not is_quit and rect[2] != -1 and rect[3] != -1:
                 # Сохранить размеченный кадр в jpg-файл
