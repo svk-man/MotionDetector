@@ -60,6 +60,8 @@ def detect_in_video():
 
     frame_statistics = []
     frame_id = 1
+    is_skip_frame = True
+    frame_skip_count = 0
     with detection_graph.as_default():
         with tf.Session(graph=detection_graph) as sess:
             # Definite input and output Tensors for detection_graph
@@ -89,8 +91,9 @@ def detect_in_video():
                 # https://www.learnopencv.com/why-does-opencv-use-bgr-color-format/
                 color_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                image_np_expanded = np.expand_dims(color_frame, axis=0)
-                if i >= 1000 and i < 1002:
+                if not is_skip_frame:
+                    image_np_expanded = np.expand_dims(color_frame, axis=0)
+
                     # Actual detection.
                     (boxes, scores, classes, num) = sess.run(
                         [detection_boxes, detection_scores,
@@ -110,43 +113,51 @@ def detect_in_video():
                         max_boxes_to_draw=1,
                         min_score_thresh=.20)
 
-                    print(np.squeeze(scores[0]))
-
                     rodent_confidence = np.squeeze(scores[0])[0]
                     rodent_class_id = np.squeeze(classes[0]).astype(np.int32)[0]
                     rodent_class_name = category_index[rodent_class_id]['name']
                     if rodent_confidence > .20:
                         frame_statistics.append({'frame_id': frame_id,
-                                           'confidence': rodent_confidence,
-                                           'rodent_class_id': rodent_class_id,
-                                           'rodent_class_name': rodent_class_name,
-                                           })
+                                                 'confidence': rodent_confidence,
+                                                 'rodent_class_id': rodent_class_id,
+                                                 'rodent_class_name': rodent_class_name,
+                                                 })
 
                 cv2.imshow('frame', cv2.resize(color_frame, (800, 600)))
                 output_rgb = cv2.cvtColor(color_frame, cv2.COLOR_RGB2BGR)
                 #out.write(output_rgb)
-                frame_id += 1
 
-                if i == 1010:
-                    break
+                # Пропустить кадр, если необходимо
+                if is_skip_frame:
+                    while 1:
+                        key = cv2.waitKey(1)
+                        if key == 32:  # Нажата клавиша "space"
+                            print("Вы пропустили " + str(frame_id) + " кадр")
+                            frame_skip_count += 1
+                            break
+                        elif key == 113 or key == 233:  # Нажата клавиша 'q' ('й')
+                            is_skip_frame = False
+                            break
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
+
+                frame_id += 1
 
             #out.release()
             cap.release()
             cv2.destroyAllWindows()
 
     statistics = {
-        'frame_count': frame_id,    # Количество кадров
-        'frame_skip_count': 0,      # Количество пропущенных кадров
-        'frame_rodent_count': 0,    # Количество кадров с грызуном
-        'frame_rat_count': 0,       # Количество кадров с крысой
-        'frame_mouse_count': 0,     # Количество кадров с мышью
-        'sum_confidence_rat': 0,    # Сумма вероятностей крысы на видео
-        'sum_confidence_mouse': 0,  # Сумма вероятностей мыши на видео
-        'mean_confidence_rat': 0,   # Средняя вероятность крысы на видео
-        'mean_confidence_mouse': 0  # Средняя вероятность мыши на видео
+        'frame_count': frame_id,                    # Количество кадров
+        'frame_skip_count': frame_skip_count,       # Количество пропущенных кадров
+        'frame_rodent_count': 0,                    # Количество кадров с грызуном
+        'frame_rat_count': 0,                       # Количество кадров с крысой
+        'frame_mouse_count': 0,                     # Количество кадров с мышью
+        'sum_confidence_rat': 0,                    # Сумма вероятностей крысы на видео
+        'sum_confidence_mouse': 0,                  # Сумма вероятностей мыши на видео
+        'mean_confidence_rat': 0,                   # Средняя вероятность крысы на видео
+        'mean_confidence_mouse': 0                  # Средняя вероятность мыши на видео
     }
 
     for frame_statistic in frame_statistics:
@@ -163,6 +174,7 @@ def detect_in_video():
 
     print('----->>> Результаты обнаружения <<<-----')
     print('Количество кадров: ' + str(statistics['frame_count']))
+    print('Количество пропущенных кадров: ' + str(statistics['frame_skip_count']))
     print('Количество кадров с грызуном: ' + str(statistics['frame_rodent_count']))
     print('Количество кадров с крысой: ' + str(statistics['frame_rat_count']))
     print('Количество кадров с мышью: ' + str(statistics['frame_mouse_count']))
