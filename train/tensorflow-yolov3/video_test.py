@@ -24,9 +24,9 @@ parser.add_argument("--new_size", nargs='*', type=int, default=[416, 416],
                     help="Resize the input image with `new_size`, size format: [width, height]")
 parser.add_argument("--letterbox_resize", type=lambda x: (str(x).lower() == 'true'), default=True,
                     help="Whether to use the letterbox resize.")
-parser.add_argument("--class_name_path", type=str, default="./data/coco.names",
+parser.add_argument("--class_name_path", type=str, default="./data/data.names",
                     help="The path of the class names.")
-parser.add_argument("--restore_path", type=str, default="./data/darknet_weights/yolov3.ckpt",
+parser.add_argument("--restore_path", type=str, default="./checkpoint/model-epoch_30_step_25853_loss_0.1543_lr_0.0001",
                     help="The path of the weights to restore.")
 parser.add_argument("--save_video", type=lambda x: (str(x).lower() == 'true'), default=False,
                     help="Whether to save the video detection results.")
@@ -57,7 +57,7 @@ with tf.Session() as sess:
 
     pred_scores = pred_confs * pred_probs
 
-    boxes, scores, labels = gpu_nms(pred_boxes, pred_scores, args.num_class, max_boxes=200, score_thresh=0.3, nms_thresh=0.45)
+    boxes, scores, labels = gpu_nms(pred_boxes, pred_scores, args.num_class, max_boxes=1, score_thresh=0.3, nms_thresh=0.45)
 
     saver = tf.train.Saver()
     saver.restore(sess, args.restore_path)

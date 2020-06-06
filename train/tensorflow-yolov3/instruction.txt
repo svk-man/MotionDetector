@@ -75,3 +75,6 @@ python get_kmeans.py
 
 17
 python train.py
+
+18
+pip3 install git+https://github.com/wizyoung/YOLOv3_TensorFlow

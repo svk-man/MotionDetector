@@ -3,6 +3,8 @@ Sections of this code were taken from:
 https://github.com/tensorflow/models/blob/master/research/object_detection/object_detection_tutorial.ipynb
 https://tensorflow-object-detection-api-tutorial.readthedocs.io/en/latest/camera.html
 """
+from __future__ import division, print_function
+
 import glob
 from os.path import join
 
@@ -28,13 +30,39 @@ import cv2
 
 from pascal_voc_writer import Writer
 
-print(tf.version.VERSION)
+import argparse
+import cv2
+import time
 
-is_yolo = False
+from utils.misc_utils import parse_anchors, read_class_names
+from utils.nms_utils import gpu_nms
+from utils.plot_utils import get_color_table, plot_one_box
+from utils.data_aug import letterbox_resize
+
+from model import yolov3
+
+print(tf.version.VERSION)
+# category_index = [
+#     {'id': 0, 'name': 'rat'},
+#     {'id': 1, 'name': 'mouse'}
+# }]
+is_yolo = True
 if is_yolo:
-    PATH_TO_CKPT = 'checkpoint/model-epoch_30_step_25853_loss_0.1543_lr_0.0001'
+    anchors = parse_anchors('../data/yolo_anchors.txt')
+    classes_yolo = read_class_names('../data/data.names')
+    num_class = len(classes_yolo)
+
+    color_table = get_color_table(2)
+
+    new_size = [416, 416]
+
+    restore_path = 'checkpoint/model-epoch_30_step_25853_loss_0.1543_lr_0.0001'
 
     PATH_TO_LABELS = os.path.join('../data', 'data.names')
+
+    is_letterbox_resize = True
+    PATH_TO_LABELS = os.path.join('../data', 'labelmap.pbtxt')
+
 else:
     # Path to frozen detection graph. This is the actual model that is used
     # for the object detection.
@@ -44,6 +72,11 @@ else:
     PATH_TO_LABELS = os.path.join('../data', 'labelmap.pbtxt')
 
 NUM_CLASSES = 2
+
+label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
+categories = label_map_util.convert_label_map_to_categories(
+    label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
+category_index = label_map_util.create_category_index(categories)
 
 sys.path.append("..")
 
@@ -64,6 +97,21 @@ def detect_in_video(video_path):
 
     if is_yolo:
         print('yolo!')
+        configuration = tf.ConfigProto(device_count={"GPU": 0})
+        sess = tf.Session(config=configuration)
+        input_data = tf.placeholder(tf.float32, [1, new_size[1], new_size[0], 3], name='input_data')
+        yolo_model = yolov3(num_class, anchors)
+        with tf.variable_scope('yolov3'):
+            pred_feature_maps = yolo_model.forward(input_data, False)
+        pred_boxes, pred_confs, pred_probs = yolo_model.predict(pred_feature_maps)
+
+        pred_scores = pred_confs * pred_probs
+
+        boxes, scores, labels = gpu_nms(pred_boxes, pred_scores, num_class, max_boxes=1, score_thresh=0.2,
+                                        nms_thresh=0.45)
+
+        saver = tf.train.Saver()
+        saver.restore(sess, restore_path)
     else:
         detection_graph = tf.Graph()
         with detection_graph.as_default():
@@ -123,6 +171,10 @@ def detect_in_video(video_path):
 
     # Загрузка видео
     cap = cv2.VideoCapture(video_path)
+    video_frame_cnt = int(cap.get(7))
+    video_width = int(cap.get(3))
+    video_height = int(cap.get(4))
+    video_fps = int(cap.get(5))
 
     # Узнать разрешение видео
     video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -144,6 +196,67 @@ def detect_in_video(video_path):
             if not is_skip_frame:
                 if is_yolo:
                     print('yoloo!!')
+                    if is_letterbox_resize:
+                        img, resize_ratio, dw, dh = letterbox_resize(frame, new_size[0], new_size[1])
+                    else:
+                        height_ori, width_ori = frame.shape[:2]
+                        img = cv2.resize(frame, tuple(new_size))
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    img = np.asarray(img, np.float32)
+                    img = img[np.newaxis, :] / 255.
+
+                    start_time = time.time()
+                    boxes_, scores_, labels_ = sess.run([boxes, scores, labels], feed_dict={input_data: img})
+                    end_time = time.time()
+
+                    # rescale the coordinates to the original image
+                    if is_letterbox_resize:
+                        boxes_[:, [0, 2]] = (boxes_[:, [0, 2]] - dw) / resize_ratio
+                        boxes_[:, [1, 3]] = (boxes_[:, [1, 3]] - dh) / resize_ratio
+                    else:
+                        boxes_[:, [0, 2]] *= (width_ori / float(new_size[0]))
+                        boxes_[:, [1, 3]] *= (height_ori / float(new_size[1]))
+
+                    for i in range(len(boxes_)):
+                        if scores_[i] == max(scores_):
+                            x0, y0, x1, y1 = boxes_[i]
+                            plot_one_box(frame, [x0, y0, x1, y1],
+                                         label=classes_yolo[labels_[i]] + ', {:.2f}%'.format(scores_[i] * 100),
+                                         color=color_table[labels_[i]])
+
+                            rodent_confidence = scores_[i]
+                            rodent_class_id = labels_[i] + 1
+                            rodent_class_name = classes_yolo[labels_[i]]
+                            if rodent_confidence >= .20:
+                                 frame_statistics.append({'frame_id': frame_id,
+                                                          'confidence': rodent_confidence,
+                                                          'rodent_class_id': rodent_class_id,
+                                                          'rodent_class_name': rodent_class_name,
+                                                          })
+
+                                 # Сохранить кадр
+                                 frame_name = rodent_class_name + '/image' + str(frame_id) + '.jpg'
+                                 cv2.imwrite(frame_name, frame)
+
+                                 # Сохранить xml-файл
+                                 #scores = np.squeeze(scores[0])
+
+                                 #bbox_coords = boxes[0]
+                                 #writer = Writer('.', video_width, video_height)
+                                 #writer.addObject(rodent_class_name, bbox_coords[1] * video_width,
+                                                  #bbox_coords[0] * video_height, bbox_coords[3] * video_width,
+                                                  #bbox_coords[2] * video_height)
+                                 #writer.save('image' + str(frame_id) + '.xml')
+
+
+                             #else:
+                                 # Сохранить кадр
+                                 #frame_name = 'image' + str(frame_id) + '.jpg'
+                                 #cv2.imwrite(frame_name, frame)
+
+                    cv2.putText(frame, '{:.2f}ms'.format((end_time - start_time) * 1000), (40, 40), 0,
+                                    fontScale=1, color=(0, 255, 0), thickness=2)
+
                 else:
                     image_np_expanded = np.expand_dims(frame, axis=0)
 
@@ -166,36 +279,36 @@ def detect_in_video(video_path):
                         max_boxes_to_draw=1,
                         min_score_thresh=.20)
 
-                    rodent_confidence = np.squeeze(scores[0])[0]
-                    rodent_class_id = np.squeeze(classes[0]).astype(np.int32)[0]
-                    rodent_class_name = category_index[rodent_class_id]['name']
-                    if rodent_confidence > .20:
-                        frame_statistics.append({'frame_id': frame_id,
-                                                 'confidence': rodent_confidence,
-                                                 'rodent_class_id': rodent_class_id,
-                                                 'rodent_class_name': rodent_class_name,
-                                                 })
-
-                        # Сохранить кадр
-                        frame_name = rodent_class_name + '/image' + str(frame_id) + '.jpg'
-                        cv2.imwrite(frame_name, frame)
-
-                        # Сохранить xml-файл
-                        scores = np.squeeze(scores[0])
-                        for i in range(min(1, np.squeeze(boxes[0]).shape[0])):
-                            if scores is None or scores[i] > .20:
-                                boxes = tuple(boxes[i].tolist())
-
-                        bbox_coords = boxes[0]
-                        writer = Writer('.', video_width, video_height)
-                        writer.addObject(rodent_class_name, bbox_coords[1] * video_width,
-                                         bbox_coords[0] * video_height, bbox_coords[3] * video_width,
-                                         bbox_coords[2] * video_height)
-                        writer.save('image' + str(frame_id) + '.xml')
-                    else:
-                        # Сохранить кадр
-                        frame_name = 'image' + str(frame_id) + '.jpg'
-                        cv2.imwrite(frame_name, frame)
+                # rodent_confidence = np.squeeze(scores[0])[0]
+                # rodent_class_id = np.squeeze(classes[0]).astype(np.int32)[0]
+                # rodent_class_name = category_index[rodent_class_id]['name']
+                # if rodent_confidence > .20:
+                #     frame_statistics.append({'frame_id': frame_id,
+                #                              'confidence': rodent_confidence,
+                #                              'rodent_class_id': rodent_class_id,
+                #                              'rodent_class_name': rodent_class_name,
+                #                              })
+                #
+                #     # Сохранить кадр
+                #     frame_name = rodent_class_name + '/image' + str(frame_id) + '.jpg'
+                #     cv2.imwrite(frame_name, frame)
+                #
+                #     # Сохранить xml-файл
+                #     scores = np.squeeze(scores[0])
+                #     for i in range(min(1, np.squeeze(boxes[0]).shape[0])):
+                #         if scores is None or scores[i] > .20:
+                #             boxes = tuple(boxes[i].tolist())
+                #
+                #     bbox_coords = boxes[0]
+                #     writer = Writer('.', video_width, video_height)
+                #     writer.addObject(rodent_class_name, bbox_coords[1] * video_width,
+                #                      bbox_coords[0] * video_height, bbox_coords[3] * video_width,
+                #                      bbox_coords[2] * video_height)
+                #     writer.save('image' + str(frame_id) + '.xml')
+                # else:
+                #     # Сохранить кадр
+                #     frame_name = 'image' + str(frame_id) + '.jpg'
+                #     cv2.imwrite(frame_name, frame)
 
             cv2.imshow('frame', cv2.resize(frame, (800, 600)))
             output_rgb = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -258,7 +371,7 @@ def detect_in_video(video_path):
 
 
 def main():
-    detect_in_video('../temp/' + 'WIN_20191218_11_03_57_Pro.mp4')
+    detect_in_video('' + 'WIN_20191218_11_26_01_Pro.mp4')
 
 
 if __name__ == '__main__':

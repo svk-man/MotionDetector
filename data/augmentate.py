@@ -13,10 +13,10 @@ def read_bbox_from_xml(xml_path):
     tree = ET.parse(xml_path)
     root = tree.getroot()
     member = root.find('object')
-    bbox.append(int(member[4][0].text))
-    bbox.append(int(member[4][1].text))
-    bbox.append(int(member[4][2].text))
-    bbox.append(int(member[4][3].text))
+    bbox.append(int(float(member[4][0].text)))
+    bbox.append(int(float(member[4][1].text)))
+    bbox.append(int(float(member[4][2].text)))
+    bbox.append(int(float(member[4][3].text)))
     return bbox
 
 def read_class_from_xml(xml_path):
@@ -37,10 +37,10 @@ def xml_to_csv(path, type_directory):
                      int(root.find('size')[0].text),
                      int(root.find('size')[1].text),
                      member[0].text,
-                     int(member[4][0].text),
-                     int(member[4][1].text),
-                     int(member[4][2].text),
-                     int(member[4][3].text)
+                     int(float(member[4][0].text)),
+                     int(float(member[4][1].text)),
+                     int(float(member[4][2].text)),
+                     int(float(member[4][3].text))
                      )
             xml_list.append(value)
     column_name = ['filename', 'width', 'height', 'class', 'xmin', 'ymin', 'xmax', 'ymax']
