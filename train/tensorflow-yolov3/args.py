@@ -14,7 +14,7 @@ save_dir = './checkpoint/'  # The directory of the weights to save.
 log_dir = './data/logs/'  # The directory to store the tensorboard log files.
 progress_log_path = './data/progress.log'  # The path to record the training progress.
 anchor_path = './data/yolo_anchors.txt'  # The path of the anchor txt file.
-class_name_path = './data/coco.names'  # The path of the class names.
+class_name_path = './data/data.names'  # The path of the class names.
 
 ### Training releated numbers
 batch_size = 6
@@ -62,7 +62,7 @@ update_part = ['yolov3/yolov3_head']
 ### other training strategies
 multi_scale_train = True  # Whether to apply multi-scale training strategy. Image size varies from [320, 320] to [640, 640] by default.
 use_label_smooth = True # Whether to use class label smoothing strategy.
-use_focal_loss = True  # Whether to apply focal loss on the conf loss.
+use_focal_loss = False  # Whether to apply focal loss on the conf loss.
 use_mix_up = True  # Whether to use mix up data augmentation strategy. 
 use_warm_up = True  # whether to use warm up strategy to prevent from gradient exploding.
 warm_up_epoch = 3  # Warm up training epoches. Set to a larger value if gradient explodes.
@@ -70,7 +70,7 @@ warm_up_epoch = 3  # Warm up training epoches. Set to a larger value if gradient
 ### some constants in validation
 # nms
 nms_threshold = 0.45  # iou threshold in nms operation
-score_threshold = 0.01  # threshold of the probability of the classes in nms operation, i.e. score = pred_confs * pred_probs. set lower for higher recall.
+score_threshold = 0.1  # threshold of the probability of the classes in nms operation, i.e. score = pred_confs * pred_probs. set lower for higher recall.
 nms_topk = 150  # keep at most nms_topk outputs after nms
 # mAP eval
 eval_threshold = 0.5  # the iou threshold applied in mAP evaluation

@@ -24,7 +24,7 @@ pip install opencv-python==4.1.2.30
 pip install tqdm
 
 8
-cd MotionDetector\train\tensorflow-yolov3
+cd MotionDetector/train/tensorflow-yolov3
 
 9
 # yolov3
