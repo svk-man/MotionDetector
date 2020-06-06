@@ -14,11 +14,17 @@ conda activate yolov3
 4
 conda install python=3.6.8
 
-5
+pip install Cython
+
+pip install Pillow
+
+
 pip install -r ./requirements.txt
 
 6
 pip install opencv-python==4.1.2.30
+
+pip install pandas
 
 7
 # yolov3
@@ -32,12 +38,15 @@ wget --no-check-certificate -P ../../model_data https://pjreddie.com/media/files
 collect data: train and test
 
 10
-python ../../data/xml_to_yolov3.py
+cd C:\MotionDetector\data\
+python xml_to_yolov3.py
 
 11
 edit yolov3 /configs.py
 
 12
+cd C:\MotionDetector\train\yolov3
+
 train_bottleneck.py:
 Choose this method if you train on CPU, or want to train model faster (lower accuracy model). Required a lot of RAM and HDD space.
 

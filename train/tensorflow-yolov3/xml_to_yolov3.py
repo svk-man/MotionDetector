@@ -3,7 +3,9 @@ import os
 import glob
 import pandas as pd
 
-script_path = 'C:/Users/kravc/PycharmProjects/MotionDetector/train/tensorflow-yolov3'
+# Узнать можно с помощью команды pwd
+script_path = '/home/tensor.user/MotionDetector/train/tensorflow-yolov3'
+
 data_path = 'data/my_data/'
 #names_file_path = "./data/names.txt"
 names = []

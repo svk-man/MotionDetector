@@ -1,0 +1,74 @@
+repo: https://github.com/wizyoung/YOLOv3_TensorFlow
+gpu: GeForce GTX 1080 Ti
+
+1
+Сервер: cd C:\MotionDetector\train\yolov3
+Кластер: опеределяем текущий путь с помощью команды pwd
+
+2
+conda create --name tensorflow-yolov3
+
+3
+conda activate tensorflow-yolov3
+
+4
+conda install python=3.6.8
+
+5
+conda install tensorflow-gpu==1.13.1
+
+6
+pip install opencv-python==4.1.2.30
+
+7
+pip install tqdm
+
+8
+cd MotionDetector\train\tensorflow-yolov3
+
+9
+# yolov3
+wget --no-check-certificate -P ./data/darknet_weights https://pjreddie.com/media/files/yolov3.weights
+
+# yolov3-tiny (не используется)
+wget --no-check-certificate -P ./data/darknet_weights https://pjreddie.com/media/files/yolov3-tiny.weights
+
+10
+python convert_weight.py
+
+11
+python test_single_image.py ./data/demo_data/messi.jpg
+python video_test.py ./data/demo_data/video.mp4
+
+12
+Data preparation
+annotation file
+Generate train.txt/val.txt/test.txt files under ./data/my_data/ directory
+One line for one image, in the format like image_index image_absolute_path img_width img_height box_1 box_2 ... box_n.
+Box_x format: label_index x_min y_min x_max y_max.
+
+For example:
+
+0 xxx/xxx/a.jpg 1920 1080 0 453 369 473 391 1 588 245 608 268
+1 xxx/xxx/b.jpg 1920 1080 1 466 403 485 422 2 793 300 809 320
+...
+
+13
+pip install pandas
+
+14
+python xml_to_yolov3.py
+
+15
+class_names file:
+Generate the data.names file under ./data/my_data/ directory. Each line represents a class name.
+
+For example:
+
+bird
+person
+bike
+...
+
+16
+python train.py
