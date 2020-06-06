@@ -124,28 +124,28 @@ def main(directory_list):
                     A.HorizontalFlip(always_apply=False, p=0.5),
                     A.Flip(always_apply=False, p=0.5),
                     A.Transpose(always_apply=False, p=0.5),
-                    A.RandomGamma(gamma_limit=(120, 150), eps=None, always_apply=False, p=0.75),
+                    #A.RandomGamma(gamma_limit=(120, 150), eps=None, always_apply=False, p=0.75),
                     A.RandomRotate90(always_apply=False, p=0.5),
                     A.Rotate(limit=(-360, 360), interpolation=1, border_mode=1, value=None, mask_value=None,
                              always_apply=False, p=0.5),
-                    A.GaussNoise(var_limit=(10.0, 150.0), mean=0, always_apply=False, p=0.25),
-                    A.ISONoise(color_shift=(0.0, 0.5), intensity=(0.1, 0.5), always_apply=False, p=0.25),
-                    A.MultiplicativeNoise(multiplier=(0.9, 1.1), per_channel=True,
-                                          elementwise=True, always_apply=False, p=0.25),
-                    A.Blur(blur_limit=3, always_apply=False, p=0.15),
-                    A.ToGray(always_apply=False, p=0.15),
-                    A.OneOf([
-                        A.HueSaturationValue(hue_shift_limit=(-15, 15), sat_shift_limit=(-15, 15),
-                                             val_shift_limit=(-15, 15), always_apply=False, p=0.5),
-                        A.RGBShift(r_shift_limit=3, g_shift_limit=5, b_shift_limit=5, always_apply=False, p=0.5)
-                    ], p=0.75),
-                    A.OneOf([
-                        A.RandomBrightness(limit=0.1, always_apply=False, p=0.5),
-                        A.RandomContrast(limit=0.1, always_apply=False, p=0.5),
-                        A.RandomBrightnessContrast(brightness_limit=0.1,
-                                                   contrast_limit=0.1, brightness_by_max=False,
-                                                   always_apply=False, p=0.5),
-                    ], p=0.75)
+                    #A.GaussNoise(var_limit=(10.0, 150.0), mean=0, always_apply=False, p=0.25),
+                    #A.ISONoise(color_shift=(0.0, 0.5), intensity=(0.1, 0.5), always_apply=False, p=0.25),
+                    #A.MultiplicativeNoise(multiplier=(0.9, 1.1), per_channel=True,
+                    #                      elementwise=True, always_apply=False, p=0.25),
+                    #A.Blur(blur_limit=3, always_apply=False, p=0.15),
+                    #A.ToGray(always_apply=False, p=0.15),
+                    #A.OneOf([
+                    #    A.HueSaturationValue(hue_shift_limit=(-15, 15), sat_shift_limit=(-15, 15),
+                    #                         val_shift_limit=(-15, 15), always_apply=False, p=0.5),
+                    #    A.RGBShift(r_shift_limit=3, g_shift_limit=5, b_shift_limit=5, always_apply=False, p=0.5)
+                    #], p=0.75),
+                    #A.OneOf([
+                    #    A.RandomBrightness(limit=0.1, always_apply=False, p=0.5),
+                    #    A.RandomContrast(limit=0.1, always_apply=False, p=0.5),
+                    #    A.RandomBrightnessContrast(brightness_limit=0.1,
+                    #                               contrast_limit=0.1, brightness_by_max=False,
+                    #                               always_apply=False, p=0.5),
+                    #], p=0.75)
                 ],
                 bbox_params=bbox_params
             )
