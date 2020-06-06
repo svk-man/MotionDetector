@@ -71,4 +71,7 @@ bike
 ...
 
 16
+python get_kmeans.py
+
+17
 python train.py
