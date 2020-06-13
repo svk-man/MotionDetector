@@ -1,0 +1,12 @@
+Cython==0.29.20
+Pillow==7.1.2
+PySide2==5.14.2
+contextlib2=0.6.0.post1
+lxml==4.5.1
+jupyter==1.0.0
+matplotlib==3.2.1
+tensorflow==1.13.1
+tensorflow-gpu==1.13.1
+qimage2ndarra==1.8.3
+opencv-python==4.2.0.34
+numpy==1.17.0
