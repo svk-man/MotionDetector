@@ -107,7 +107,7 @@ class VideoPlayer(QtWidgets.QWidget):
             frame = cv2.resize(frame, (self.video_size.width(), self.video_size.height()), interpolation=cv2.INTER_AREA)
 
         if self.video:
-            frame = self.detector.predict(frame)
+            frame = self.detector.detect(self.detector.session, image=frame)
 
         image = qimage2ndarray.array2qimage(frame)
 
@@ -123,59 +123,56 @@ class VideoPlayer(QtWidgets.QWidget):
 class Detector:
 
     def __init__(self):
+        self.detection_graph = tf.Graph()
+        self.session = None
         self.path_to_ckpt = 'models/inference_graph/frozen_inference_graph.pb'
         self.path_to_labels = 'data/labelmap.pbtxt'
         self.num_classes = 2
         self.max_boxes_to_draw = 1
         self.min_score_thresh = .20
 
-        #load graph
-        detection_graph = tf.Graph()
-        with detection_graph.as_default():
-            od_graph_def = tf.GraphDef()
-            with tf.gfile.GFile(self.path_to_ckpt, 'rb') as fid:
-                serialized_graph = fid.read()
-                od_graph_def.ParseFromString(serialized_graph)
-                tf.import_graph_def(od_graph_def, name='')
-            self.sess = tf.Session(graph=detection_graph)
+        # Get category index
+        self.label_map = label_map_util.load_labelmap(self.path_to_labels)
+        self.categories = label_map_util.convert_label_map_to_categories(
+            self.label_map, max_num_classes=self.num_classes, use_display_name=True)
+        self.category_index = label_map_util.create_category_index(self.categories)
 
-            # Definite input and output Tensors for detection_graph
-            self.image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
-            # Each box represents a part of the image where a particular object
-            # was detected.
-            self.detection_boxes = detection_graph.get_tensor_by_name(
-                'detection_boxes:0')
-            # Each score represent how level of confidence for each of the objects.
-            # Score is shown on the result image, together with the class
-            # label.
-            self.detection_scores = detection_graph.get_tensor_by_name(
-                'detection_scores:0')
-            self.detection_classes = detection_graph.get_tensor_by_name(
-                'detection_classes:0')
-            self.num_detections = detection_graph.get_tensor_by_name(
-                'num_detections:0')
+        # Load a (frozen) Tensorflow model into memory.
+        with tf.gfile.GFile(self.path_to_ckpt, 'rb') as fid:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(fid.read())
+        with tf.Graph().as_default() as graph:
+            tf.import_graph_def(graph_def, name='prefix')
+        self.detection_graph = graph
+        with self.detection_graph.as_default():
+            self.session = tf.Session()
 
-        # get category index
-        label_map = label_map_util.load_labelmap(self.path_to_labels)
-        categories = label_map_util.convert_label_map_to_categories(
-            label_map, max_num_classes=self.num_classes, use_display_name=True)
-        self.category_index = label_map_util.create_category_index(categories)
+    def __del__(self):
+        if self.session is not None:
+            self.session.close()
 
-    def predict(self, frame):
-        image_np_expanded = np.expand_dims(frame, axis=0)
-
+    def detect(self, sess, image):
+        image_np_expanded = np.expand_dims(image, axis=0)
+        # Extract image tensor
+        image_tensor = self.detection_graph.get_tensor_by_name('prefix/image_tensor:0')
+        # Extract detection boxes
+        boxes = self.detection_graph.get_tensor_by_name('prefix/detection_boxes:0')
+        # Extract detection scores
+        scores = self.detection_graph.get_tensor_by_name('prefix/detection_scores:0')
+        # Extract detection classes
+        classes = self.detection_graph.get_tensor_by_name('prefix/detection_classes:0')
+        # Extract number of detectionsd
+        num_detections = self.detection_graph.get_tensor_by_name('prefix/num_detections:0')
         # Actual detection.
         start_time = time.time()
-        (boxes, scores, classes, num) = self.sess.run(
-            [self.detection_boxes, self.detection_scores,
-             self.detection_classes, self.num_detections],
-            feed_dict={self.image_tensor: image_np_expanded})
+        (boxes, scores, classes, num_detections) = sess.run(
+            [boxes, scores, classes, num_detections],
+            feed_dict={image_tensor: image_np_expanded})
         end_time = time.time()
 
         # Visualization of the results of a detection.
-        # note: perform the detections using a higher threshold
         vis_util.visualize_boxes_and_labels_on_image_array(
-            frame,
+            image,
             np.squeeze(boxes[0]),
             np.squeeze(classes[0]).astype(np.int32),
             np.squeeze(scores[0]),
@@ -185,10 +182,10 @@ class Detector:
             max_boxes_to_draw=self.max_boxes_to_draw,
             min_score_thresh=self.min_score_thresh)
 
-        cv2.putText(frame, '{:.2f}ms'.format((end_time - start_time) * 1000), (40, 40), 0,
+        cv2.putText(image, '{:.2f}ms'.format((end_time - start_time) * 1000), (40, 40), 0,
                     fontScale=1, color=(0, 255, 0), thickness=2)
 
-        return frame
+        return image
 
 
 if __name__ == "__main__":
