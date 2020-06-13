@@ -23,15 +23,15 @@ class VideoPlayer(QtWidgets.QWidget):
     pause = False
     video = False
 
-    def __init__(self, width=640, height=640, fps=60):
+    def __init__(self, width=640, height=640, camera_fps=60):
         QtWidgets.QWidget.__init__(self)
         self.video_size = QtCore.QSize(width, height)
         self.camera_capture = cv2.VideoCapture(cv2.CAP_DSHOW)
         self.video_capture = cv2.VideoCapture()
 
         self.frame_timer = QtCore.QTimer()
-        self.setup_camera(fps)
-        self.fps = fps
+        self.setup_camera(camera_fps)
+        self.fps = None
 
         self.frame_label = QtWidgets.QLabel()
         self.quit_button = QtWidgets.QPushButton("Quit")
@@ -75,9 +75,16 @@ class VideoPlayer(QtWidgets.QWidget):
             if len(path[0]):
                 self.video_capture.open(path[0])
                 self.camera_video_button.setText("Switch to camera")
-        else:
-            self.camera_video_button.setText('Switch no video')
-            self.video_capture.release()
+                # Find OpenCV version
+                (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
+
+                if int(major_ver) < 3:
+                    fps = self.video_capture.get(cv2.cv.CV_CAP_PROP_FPS)
+                else :
+                    fps = self.video_capture.get(cv2.CAP_PROP_FPS)
+            else:
+                self.camera_video_button.setText('Switch no video')
+                self.video_capture.release()
 
         self.video = not self.video
 
