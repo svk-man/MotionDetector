@@ -23,15 +23,15 @@ class VideoPlayer(QtWidgets.QWidget):
     pause = False
     video = False
 
-    def __init__(self, width=640, height=640, camera_fps=60):
+    def __init__(self, width=640, height=640, custom_fps=60):
         QtWidgets.QWidget.__init__(self)
         self.video_size = QtCore.QSize(width, height)
         self.camera_capture = cv2.VideoCapture(cv2.CAP_DSHOW)
         self.video_capture = cv2.VideoCapture()
 
         self.frame_timer = QtCore.QTimer()
-        self.setup_camera(camera_fps)
-        self.fps = None
+        self.setup_camera(custom_fps)
+        self.fps = custom_fps
 
         self.frame_label = QtWidgets.QLabel()
         self.quit_button = QtWidgets.QPushButton("Quit")
@@ -75,13 +75,20 @@ class VideoPlayer(QtWidgets.QWidget):
             if len(path[0]):
                 self.video_capture.open(path[0])
                 self.camera_video_button.setText("Switch to camera")
-                # Find OpenCV version
+
+                # Get video fps
                 (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
 
+                video_fps = 0
                 if int(major_ver) < 3:
-                    fps = self.video_capture.get(cv2.cv.CV_CAP_PROP_FPS)
-                else :
-                    fps = self.video_capture.get(cv2.CAP_PROP_FPS)
+                    video_fps = self.video_capture.get(cv2.cv.CV_CAP_PROP_FPS)
+                else:
+                    video_fps = self.video_capture.get(cv2.CAP_PROP_FPS)
+
+                if video_fps >= self.fps:
+                    self.fps = video_fps
+
+                self.frame_timer.start(int(1000 // self.fps))
             else:
                 self.camera_video_button.setText('Switch no video')
                 self.video_capture.release()
@@ -113,8 +120,8 @@ class VideoPlayer(QtWidgets.QWidget):
         else:
             frame = cv2.resize(frame, (self.video_size.width(), self.video_size.height()), interpolation=cv2.INTER_AREA)
 
-        if self.video:
-            frame = self.detector.detect(self.detector.session, image=frame)
+        #if self.video:
+            #frame = self.detector.detect(self.detector.session, image=frame)
 
         image = qimage2ndarray.array2qimage(frame)
 
