@@ -33,6 +33,11 @@ class VideoPlayer(QMainWindow):
         loadUi('view.ui', self)
         self.setWindowTitle('MotionDetector')
 
+        self.width = width
+        self.height = height
+
+        self.display.setMinimumSize(self.width, self.height)
+
         # create a timer
         self.timer = QTimer()
 
@@ -95,7 +100,7 @@ class VideoPlayer(QMainWindow):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # resize image
-        image = cv2.resize(image, (640, 640))
+        image = cv2.resize(image, (self.width, self.height))
 
         # get image infos
         height, width, channel = image.shape
@@ -172,7 +177,7 @@ class VideoPlayer(QMainWindow):
             # convert image to RGB format
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             # resize image
-            image = cv2.resize(image, (640, 640))
+            image = cv2.resize(image, (self.width, self.height))
             # get image infos
             height, width, channel = image.shape
             step = channel * width
