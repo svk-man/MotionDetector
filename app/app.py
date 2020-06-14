@@ -2,10 +2,12 @@ from __future__ import division, print_function
 import cv2
 import sys
 
-import os
-import PySide2
-from PySide2 import QtCore, QtGui, QtWidgets
-import qimage2ndarray
+from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.uic import loadUi
+from PyQt5.QtCore import pyqtSlot, QTimer
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QFileDialog
+import cv2
 
 import tensorflow as tf
 from object_detection.utils import label_map_util
@@ -13,124 +15,190 @@ from object_detection.utils import visualization_utils as vis_util
 import numpy as np
 import time
 
-dirname = os.path.dirname(PySide2.__file__)
-plugin_path = os.path.join(dirname, 'plugins', 'platforms')
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
+import os
+if os.name == "nt":  # if windows
+    from PyQt5 import __file__
+    pyqt_plugins = os.path.join(os.path.dirname(__file__), "Qt", "plugins")
+    QApplication.addLibraryPath(pyqt_plugins)
+    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = pyqt_plugins
+
+BASE_DIR = os.path.dirname(__file__)
+path = BASE_DIR.replace('\\'[0], '/')
 
 
-class VideoPlayer(QtWidgets.QWidget):
+class VideoPlayer(QMainWindow):
 
     pause = False
     video = False
 
     def __init__(self, width=640, height=640, custom_fps=60):
-        QtWidgets.QWidget.__init__(self)
-        self.video_size = QtCore.QSize(width, height)
-        self.camera_capture = cv2.VideoCapture(cv2.CAP_DSHOW)
-        self.video_capture = cv2.VideoCapture()
+        super(VideoPlayer, self).__init__()
+        loadUi('view.ui', self)
+        self.setWindowTitle('MotionDetector')
 
-        self.frame_timer = QtCore.QTimer()
-        self.setup_camera(custom_fps)
-        self.fps = custom_fps
+        # create a timer
+        self.timer = QTimer()
 
-        self.frame_label = QtWidgets.QLabel()
-        self.quit_button = QtWidgets.QPushButton("Quit")
-        self.play_pause_button = QtWidgets.QPushButton("Pause")
-        self.camera_video_button = QtWidgets.QPushButton("Switch to video")
+        # set timer timeout callback function
+        self.timer.timeout.connect(self.playVideo)
 
-        self.main_layout = QtWidgets.QGridLayout()
-
-        self.setup_ui()
-
-        QtCore.QObject.connect(self.play_pause_button, QtCore.SIGNAL("clicked()"), self.play_pause)
-        QtCore.QObject.connect(self.camera_video_button, QtCore.SIGNAL("clicked()"), self.camera_video)
+        # set control_bt callback clicked function
+        self.playButton.clicked.connect(self.playTimer)
+        self.stopButton.clicked.connect(self.stopTimer)
+        self.browseButton.clicked.connect(self.openFile)
+        self.exportButton.clicked.connect(self.convertVideo)
+        self.gotoButton.clicked.connect(self.jumpVideo)
+        self.slider.valueChanged.connect(self.skipFrame)
+        left = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Left), self)
+        left.activated.connect(self.skipLeft)
+        right = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Right), self)
+        right.activated.connect(self.skipRight)
+        up = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Up), self)
+        up.activated.connect(self.skipUp)
+        down = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Down), self)
+        down.activated.connect(self.skipDown)
+        space = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Space), self)
+        space.activated.connect(self.space)
+        open = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+O"), self)
+        open.activated.connect(self.openFile)
 
         self.detector = Detector()
 
-    # Разместить в интерфейсе элементы
-    def setup_ui(self):
-        self.frame_label.setFixedSize(self.video_size)
-        self.quit_button.clicked.connect(self.close_win)
+    def jumpVideo(self):
+        jump = int(self.gotoLine.text())
+        self.cap.set(1, jump)
+        self.slider.setValue(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)) - 1)
+        self.playVideo()
 
-        self.main_layout.addWidget(self.frame_label, 0, 0, 1, 2)
-        self.main_layout.addWidget(self.play_pause_button, 1, 0, 1, 1)
-        self.main_layout.addWidget(self.camera_video_button, 1, 1, 1, 1)
-        self.main_layout.addWidget(self.quit_button, 2, 0, 1, 2)
+    def skipUp(self):
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))+999)
+        self.playVideo()
 
-        self.setLayout(self.main_layout)
+    def skipDown(self):
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))-1001)
+        self.playVideo()
 
-    def play_pause(self):
-        if not self.pause:
-            self.frame_timer.stop()
-            self.play_pause_button.setText("Play")
+    def skipLeft(self):
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))-2)
+        ret, image = self.cap.read()
+        progress = str(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))) + ' / ' \
+                   + str(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+        self.progresslabel.setText(progress)
+        self.slider.setValue(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+
+        # convert image to RGB format
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # resize image
+        image = cv2.resize(image, (640, 640))
+
+        # get image infos
+        height, width, channel = image.shape
+        step = channel * width
+
+        # create QImage from image
+        qImg = QImage(image.data, width, height, step, QImage.Format_RGB888)
+
+        # show image in img_label
+        self.display.setPixmap(QPixmap.fromImage(qImg))
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)) - 1)
+        self.playVideo()
+
+    def skipRight(self):
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+        self.playVideo()
+
+    def space(self):
+        if self.timer.isActive():
+            self.timer.stop()
         else:
-            self.frame_timer.start(int(1000 // self.fps))
-            self.play_pause_button.setText("Pause")
+            self.timer.start()
 
-        self.pause = not self.pause
-
-    def camera_video(self):
-        if not self.video:
-            path = QtWidgets.QFileDialog.getOpenFileName(filter="Videos (*.mp4)")
-            if len(path[0]):
-                self.video_capture.open(path[0])
-                self.camera_video_button.setText("Switch to camera")
-
-                # Get video fps
-                (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
-
-                video_fps = 0
-                if int(major_ver) < 3:
-                    video_fps = self.video_capture.get(cv2.cv.CV_CAP_PROP_FPS)
-                else:
-                    video_fps = self.video_capture.get(cv2.CAP_PROP_FPS)
-
-                if video_fps >= self.fps:
-                    self.fps = video_fps
-
-                self.frame_timer.start(int(1000 // self.fps))
+    def convertVideo(self):
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        write_video = cv2.VideoCapture(self.file_name)
+        input_fps = write_video.get(cv2.CAP_PROP_FPS)
+        file = self.file_name.split('.')[0]
+        file_name = file + '_converted_.mp4'
+        print(file_name)
+        out = cv2.VideoWriter(file_name, fourcc, input_fps, (int(write_video.get(3)), int(write_video.get(4))))
+        while write_video.isOpened():
+            ret, frame = write_video.read()
+            if ret is True:
+                print(write_video.get(cv2.CAP_PROP_POS_FRAMES))
+                out.write(frame)
             else:
-                self.camera_video_button.setText('Switch no video')
-                self.video_capture.release()
+                break
+        out.release()
 
-        self.video = not self.video
+    def exportVideo(self):
+        start = self.startline.text()
+        end = self.endline.text()
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        write_video = cv2.VideoCapture(self.file_name)
+        input_fps = write_video.get(cv2.CAP_PROP_FPS)
+        out = cv2.VideoWriter(path+'/export_left_'+start+'_'+end+'.mp4', fourcc, input_fps, (360, 240))
+        write_video.set(1, int(start)-1)
+        for cur in range(int(end)-int(start)+1):
+            ret, frame = write_video.read()
+            progress = str(int(write_video.get(cv2.CAP_PROP_POS_FRAMES))) + ' / ' \
+                       + str(int(end))
+            self.exportLabel.setText(progress)
+            print(progress)
+            image = frame[240:480, 0:360]
+            out.write(image)
+        out.release()
 
-    # Считать значения и вывести на экран
-    def setup_camera(self, fps):
-        self.camera_capture.set(3, self.video_size.width())
-        self.camera_capture.set(4, self.video_size.height())
+    def skipFrame(self):
+        value = self.slider.value()
+        self.cap.set(1, value)
 
-        self.frame_timer.timeout.connect(self.display_video_stream)
-        self.frame_timer.start(int(1000 // fps))
-
-    # Показать изображение
-    def display_video_stream(self):
-        if not self.video:
-            ret, frame = self.camera_capture.read()
+    def playVideo(self):
+         # read image in BGR format
+        ret, image = self.cap.read()
+        if ret is True:
+            progress = str(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))) + ' / ' \
+                       + str(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+            self.progresslabel.setText(progress)
+            self.slider.setValue(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+            # convert image to RGB format
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # resize image
+            image = cv2.resize(image, (640, 640))
+            # get image infos
+            height, width, channel = image.shape
+            step = channel * width
+            # create QImage from image
+            qImg = QImage(image.data, width, height, step, QImage.Format_RGB888)
+            # show image in img_label
+            self.display.setPixmap(QPixmap.fromImage(qImg))
         else:
-            ret, frame = self.video_capture.read()
+            progress = str(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))) + ' / ' \
+                       + str(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+            self.progresslabel.setText(progress)
+            self.slider.setValue(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+            self.stopTimer()
 
-        if not ret:
-            return False
+    def openFile(self):
+        self.videoFileName = QFileDialog.getOpenFileName(self, 'Select Video File')
+        self.file_name = list(self.videoFileName)[0]
+        self.cap = cv2.VideoCapture(self.file_name)
+        fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+        #self.timer.start(fps)
 
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    def playTimer(self):
+        # start timer
+        self.timer.start(20)
 
-        if not self.video:
-            frame = cv2.flip(frame, 1)
-        else:
-            frame = cv2.resize(frame, (self.video_size.width(), self.video_size.height()), interpolation=cv2.INTER_AREA)
-
-        #if self.video:
-            #frame = self.detector.detect(self.detector.session, image=frame)
-
-        image = qimage2ndarray.array2qimage(frame)
-
-        self.frame_label.setPixmap(QtGui.QPixmap.fromImage(image))
+    def stopTimer(self):
+        # stop timer
+        self.timer.stop()
 
     def close_win(self):
         cv2.destroyAllWindows()
-        self.camera_capture.release()
-        self.video_capture.release()
         self.close()
 
 
@@ -203,7 +271,7 @@ class Detector:
 
 
 if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     player = VideoPlayer()
     player.show()
     sys.exit(app.exec_())
