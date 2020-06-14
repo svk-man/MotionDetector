@@ -139,9 +139,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="exportButton">
+       <widget class="QPushButton" name="detectButton">
         <property name="text">
-         <string>Convert</string>
+         <string>Detect</string>
         </property>
        </widget>
       </item>

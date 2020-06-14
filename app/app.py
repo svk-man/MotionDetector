@@ -28,10 +28,12 @@ path = BASE_DIR.replace('\\'[0], '/')
 
 class VideoPlayer(QMainWindow):
 
-    def __init__(self, width=640, height=640, custom_fps=60):
+    def __init__(self, width=640, height=640, fps=45):
         super(VideoPlayer, self).__init__()
         loadUi('view.ui', self)
         self.setWindowTitle('MotionDetector')
+
+        self.fps = fps
 
         self.width = width
         self.height = height
@@ -48,7 +50,7 @@ class VideoPlayer(QMainWindow):
         self.playButton.clicked.connect(self.playTimer)
         self.stopButton.clicked.connect(self.stopTimer)
         self.browseButton.clicked.connect(self.openFile)
-        self.exportButton.clicked.connect(self.convertVideo)
+        self.detectButton.clicked.connect(self.detectVideo)
         self.gotoButton.clicked.connect(self.jumpVideo)
         self.slider.valueChanged.connect(self.skipFrame)
         left = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Left), self)
@@ -67,7 +69,7 @@ class VideoPlayer(QMainWindow):
         # set enabled
         self.playButton.setEnabled(False)
         self.stopButton.setEnabled(False)
-        self.exportButton.setEnabled(False)
+        self.detectButton.setEnabled(False)
         self.gotoButton.setEnabled(False)
         self.slider.setEnabled(False)
 
@@ -124,7 +126,25 @@ class VideoPlayer(QMainWindow):
         else:
             self.playTimer()
 
-    def convertVideo(self):
+    def detectVideo(self):
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        write_video = cv2.VideoCapture(self.file_name)
+        input_fps = write_video.get(cv2.CAP_PROP_FPS)
+        file = self.file_name.split('.')[0]
+        file_name = file + '_detected_.mp4'
+        print(file_name)
+        out = cv2.VideoWriter(file_name, fourcc, input_fps, (int(write_video.get(3)), int(write_video.get(4))))
+        while write_video.isOpened():
+            ret, frame = write_video.read()
+            if ret is True:
+                print(write_video.get(cv2.CAP_PROP_POS_FRAMES))
+                frame = self.detector.detect(self.detector.session, frame)
+                out.write(frame)
+            else:
+                break
+        out.release()
+
+    def exportVideo(self):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         write_video = cv2.VideoCapture(self.file_name)
         input_fps = write_video.get(cv2.CAP_PROP_FPS)
@@ -139,24 +159,6 @@ class VideoPlayer(QMainWindow):
                 out.write(frame)
             else:
                 break
-        out.release()
-
-    def exportVideo(self):
-        start = self.startline.text()
-        end = self.endline.text()
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        write_video = cv2.VideoCapture(self.file_name)
-        input_fps = write_video.get(cv2.CAP_PROP_FPS)
-        out = cv2.VideoWriter(path+'/export_left_'+start+'_'+end+'.mp4', fourcc, input_fps, (360, 240))
-        write_video.set(1, int(start)-1)
-        for cur in range(int(end)-int(start)+1):
-            ret, frame = write_video.read()
-            progress = str(int(write_video.get(cv2.CAP_PROP_POS_FRAMES))) + ' / ' \
-                       + str(int(end))
-            self.exportLabel.setText(progress)
-            print(progress)
-            image = frame[240:480, 0:360]
-            out.write(image)
         out.release()
 
     def skipFrame(self):
@@ -178,6 +180,8 @@ class VideoPlayer(QMainWindow):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             # resize image
             image = cv2.resize(image, (self.width, self.height))
+            # detect
+            image = self.detector.detect(self.detector.session, image)
             # get image infos
             height, width, channel = image.shape
             step = channel * width
@@ -203,7 +207,7 @@ class VideoPlayer(QMainWindow):
         # set enabled
         self.playButton.setEnabled(True)
         self.stopButton.setEnabled(False)
-        self.exportButton.setEnabled(True)
+        self.detectButton.setEnabled(True)
         self.gotoButton.setEnabled(True)
         self.slider.setEnabled(True)
 
@@ -211,13 +215,13 @@ class VideoPlayer(QMainWindow):
 
     def playTimer(self):
         # start timer
-        self.timer.start(20)
+        self.timer.start(1000 // self.fps)
 
         # set enabled
         self.playButton.setEnabled(False)
         self.stopButton.setEnabled(True)
         self.browseButton.setEnabled(False)
-        self.exportButton.setEnabled(False)
+        self.detectButton.setEnabled(False)
 
     def stopTimer(self):
         # stop timer
@@ -227,7 +231,7 @@ class VideoPlayer(QMainWindow):
         self.playButton.setEnabled(True)
         self.stopButton.setEnabled(False)
         self.browseButton.setEnabled(True)
-        self.exportButton.setEnabled(True)
+        self.detectButton.setEnabled(True)
 
     def close_win(self):
         cv2.destroyAllWindows()
