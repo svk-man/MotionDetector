@@ -28,9 +28,6 @@ path = BASE_DIR.replace('\\'[0], '/')
 
 class VideoPlayer(QMainWindow):
 
-    pause = False
-    video = False
-
     def __init__(self, width=640, height=640, custom_fps=60):
         super(VideoPlayer, self).__init__()
         loadUi('view.ui', self)
@@ -61,6 +58,13 @@ class VideoPlayer(QMainWindow):
         space.activated.connect(self.space)
         open = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+O"), self)
         open.activated.connect(self.openFile)
+
+        # set enabled
+        self.playButton.setEnabled(False)
+        self.stopButton.setEnabled(False)
+        self.exportButton.setEnabled(False)
+        self.gotoButton.setEnabled(False)
+        self.slider.setEnabled(False)
 
         self.detector = Detector()
 
@@ -153,6 +157,9 @@ class VideoPlayer(QMainWindow):
     def skipFrame(self):
         value = self.slider.value()
         self.cap.set(1, value)
+        progress = str(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))) + ' / ' \
+                   + str(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+        self.progresslabel.setText(progress)
 
     def playVideo(self):
          # read image in BGR format
@@ -187,15 +194,35 @@ class VideoPlayer(QMainWindow):
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.slider.setMinimum(0)
         self.slider.setMaximum(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
-        #self.timer.start(fps)
+
+        # set enabled
+        self.playButton.setEnabled(True)
+        self.stopButton.setEnabled(False)
+        self.exportButton.setEnabled(True)
+        self.gotoButton.setEnabled(True)
+        self.slider.setEnabled(True)
+
+        self.playVideo()
 
     def playTimer(self):
         # start timer
         self.timer.start(20)
 
+        # set enabled
+        self.playButton.setEnabled(False)
+        self.stopButton.setEnabled(True)
+        self.browseButton.setEnabled(False)
+        self.exportButton.setEnabled(False)
+
     def stopTimer(self):
         # stop timer
         self.timer.stop()
+
+        # set enabled
+        self.playButton.setEnabled(True)
+        self.stopButton.setEnabled(False)
+        self.browseButton.setEnabled(True)
+        self.exportButton.setEnabled(True)
 
     def close_win(self):
         cv2.destroyAllWindows()
