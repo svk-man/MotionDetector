@@ -122,7 +122,14 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="gotoLine"/>
+       <widget class="QLineEdit" name="gotoLine">
+        <property name="focusPolicy">
+         <enum>Qt::ClickFocus</enum>
+        </property>
+        <property name="echoMode">
+         <enum>QLineEdit::Normal</enum>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="gotoButton">

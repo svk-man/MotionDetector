@@ -120,9 +120,9 @@ class VideoPlayer(QMainWindow):
 
     def space(self):
         if self.timer.isActive():
-            self.timer.stop()
+            self.stopTimer()
         else:
-            self.timer.start()
+            self.playTimer()
 
     def convertVideo(self):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
