@@ -160,12 +160,13 @@ class VideoPlayer(QMainWindow):
         input_fps = video.get(cv2.CAP_PROP_FPS)
 
         # out video properties
-        file_out_name = video_dir + video_name + '_detected_.mp4'
+        file_out_name = video_dir + video_name + '_detected.mp4'
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(file_out_name, fourcc, input_fps, (video_width, video_height))
+        out = cv2.VideoWriter(file_out_name, fourcc, input_fps, (self.width, self.height))
 
         frame_statistics = []
         frame_id = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) - 1)
+        frame_skip_count = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
         total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if frame_id >= 0 & frame_id <= total_frames:
             video.set(1, frame_id)
@@ -211,11 +212,46 @@ class VideoPlayer(QMainWindow):
                     frame_name = video_images_dir + '/image_' + str(frame_id) + '.png'
                     cv2.imwrite(frame_name, frame)
 
+                frame_detect = cv2.cvtColor(frame_detect, cv2.COLOR_RGB2BGR)
                 out.write(frame_detect)
             else:
                 break
 
         out.release()
+
+        statistics = {
+            'frame_count': frame_id,  # Количество кадров
+            'frame_skip_count': frame_skip_count,  # Количество пропущенных кадров
+            'frame_rodent_count': 0,  # Количество кадров с грызуном
+            'frame_rat_count': 0,  # Количество кадров с крысой
+            'frame_mouse_count': 0,  # Количество кадров с мышью
+            'sum_confidence_rat': 0,  # Сумма вероятностей крысы на видео
+            'sum_confidence_mouse': 0,  # Сумма вероятностей мыши на видео
+            'mean_confidence_rat': 0,  # Средняя вероятность крысы на видео
+            'mean_confidence_mouse': 0  # Средняя вероятность мыши на видео
+        }
+
+        for frame_statistic in frame_statistics:
+            if frame_statistic['rodent_class_name'] == 'rat':
+                statistics['frame_rodent_count'] += 1
+                statistics['frame_rat_count'] += 1
+                statistics['sum_confidence_rat'] += frame_statistic['confidence']
+                statistics['mean_confidence_rat'] = statistics['sum_confidence_rat'] / statistics['frame_rat_count']
+            elif frame_statistic['rodent_class_name'] == 'mouse':
+                statistics['frame_rodent_count'] += 1
+                statistics['frame_mouse_count'] += 1
+                statistics['sum_confidence_mouse'] += frame_statistic['confidence']
+                statistics['mean_confidence_mouse'] = statistics['sum_confidence_mouse'] / statistics[
+                    'frame_mouse_count']
+
+        print('----->>> Результаты обнаружения <<<-----')
+        print('Количество кадров: ' + str(statistics['frame_count']))
+        print('Количество пропущенных кадров: ' + str(statistics['frame_skip_count']))
+        print('Количество кадров с грызуном: ' + str(statistics['frame_rodent_count']))
+        print('Количество кадров с крысой: ' + str(statistics['frame_rat_count']))
+        print('Количество кадров с мышью: ' + str(statistics['frame_mouse_count']))
+        print('Средняя вероятность крысы на видео: ' + str(statistics['mean_confidence_rat']))
+        print('Средняя вероятность мыши на видео: ' + str(statistics['mean_confidence_mouse']))
 
     def remove_files_in_dir(self, video_images_dir):
         images = glob.glob(join(video_images_dir, "*"))
