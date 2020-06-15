@@ -14,6 +14,9 @@ from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
 import numpy as np
 import time
+from pascal_voc_writer import Writer
+from os.path import join
+import glob
 
 import os
 if os.name == "nt":  # if windows
@@ -74,6 +77,10 @@ class VideoPlayer(QMainWindow):
         self.slider.setEnabled(False)
 
         self.detector = Detector()
+        self.save_dir = 'output/'
+        self.save_images_dir = 'images/'
+        self.save_images_dir_rat = 'rat/'
+        self.save_images_dir_mouse = 'mouse/'
 
     def jumpVideo(self):
         jump = int(self.gotoLine.text())
@@ -127,22 +134,94 @@ class VideoPlayer(QMainWindow):
             self.playTimer()
 
     def detectVideo(self):
+        # Создать директорию с кадрами для заданного видео
+        video_base_name = os.path.basename(self.file_name)
+        video_name = os.path.splitext(video_base_name)[0]
+        video_dir = self.save_dir + video_name + '/'
+        video_images_dir = video_dir + self.save_images_dir
+
+        if not os.path.exists(video_images_dir):
+            os.makedirs(video_images_dir)
+        else:
+            # Удалить все кадры из целевой директории
+            self.remove_files_in_dir(video_images_dir)
+
+        video_images_dir_rat = video_images_dir + self.save_images_dir_rat
+        video_images_dir_mouse = video_images_dir + self.save_images_dir_mouse
+        os.makedirs(video_images_dir_rat, exist_ok=True)
+        os.makedirs(video_images_dir_mouse, exist_ok=True)
+        self.remove_files_in_dir(video_images_dir_rat)
+        self.remove_files_in_dir(video_images_dir_mouse)
+
+        # video properties
+        video = cv2.VideoCapture(self.file_name)
+        video_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        video_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        input_fps = video.get(cv2.CAP_PROP_FPS)
+
+        # out video properties
+        file_out_name = video_dir + video_name + '_detected_.mp4'
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        write_video = cv2.VideoCapture(self.file_name)
-        input_fps = write_video.get(cv2.CAP_PROP_FPS)
-        file = self.file_name.split('.')[0]
-        file_name = file + '_detected_.mp4'
-        print(file_name)
-        out = cv2.VideoWriter(file_name, fourcc, input_fps, (int(write_video.get(3)), int(write_video.get(4))))
-        while write_video.isOpened():
-            ret, frame = write_video.read()
+        out = cv2.VideoWriter(file_out_name, fourcc, input_fps, (video_width, video_height))
+
+        frame_statistics = []
+        frame_id = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) - 1)
+        total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if frame_id >= 0 & frame_id <= total_frames:
+            video.set(1, frame_id)
+        while True:
+            ret, frame = video.read()
             if ret is True:
-                print(write_video.get(cv2.CAP_PROP_POS_FRAMES))
-                frame = self.detector.detect(self.detector.session, frame)
-                out.write(frame)
+                frame_id += 1
+                frame_detect = frame.copy()
+                frame_detect = cv2.cvtColor(frame_detect, cv2.COLOR_BGR2RGB)
+                frame_detect = cv2.resize(frame_detect, (self.width, self.height))
+                frame_info = self.detector.detect(self.detector.session, frame_detect)
+                frame_id = int(video.get(cv2.CAP_PROP_POS_FRAMES))
+
+                # get statistics if rodent is found
+                rodent_confidence = np.squeeze(frame_info['scores'][0])[0]
+                rodent_class_id = np.squeeze(frame_info['classes'][0]).astype(np.int32)[0]
+                rodent_class_name = self.detector.category_index[rodent_class_id]['name']
+                if rodent_confidence > self.detector.min_score_thresh:
+                    frame_statistics.append({'frame_id': frame_id,
+                                            'confidence': rodent_confidence,
+                                            'rodent_class_id': rodent_class_id,
+                                            'rodent_class_name': rodent_class_name,
+                                            })
+
+                    # save frame
+                    frame_name = video_images_dir + rodent_class_name + '/image_' + str(frame_id) + '.png'
+                    cv2.imwrite(frame_name, frame)
+
+                    # save xml-file
+                    scores = np.squeeze(frame_info['scores'][0])
+                    for i in range(min(1, np.squeeze(frame_info['boxes'][0]).shape[0])):
+                        if scores is None or scores[i] > self.detector.min_score_thresh:
+                            boxes = tuple(frame_info['boxes'][i].tolist())
+
+                    bbox_coords = boxes[0]
+                    writer = Writer(frame_name, video_width, video_height)
+                    writer.addObject(rodent_class_name, bbox_coords[1] * video_width,
+                                    bbox_coords[0] * video_height, bbox_coords[3] * video_width,
+                                    bbox_coords[2] * video_height)
+                    writer.save(video_images_dir + rodent_class_name + '/image_' + str(frame_id) + '.xml')
+                else:
+                    # save frame
+                    frame_name = video_images_dir + '/image_' + str(frame_id) + '.png'
+                    cv2.imwrite(frame_name, frame)
+
+                out.write(frame_detect)
             else:
                 break
+
         out.release()
+
+    def remove_files_in_dir(self, video_images_dir):
+        images = glob.glob(join(video_images_dir, "*"))
+        for f in images:
+            if not os.path.isdir(f):
+                os.remove(f)
 
     def exportVideo(self):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -181,7 +260,8 @@ class VideoPlayer(QMainWindow):
             # resize image
             image = cv2.resize(image, (self.width, self.height))
             # detect
-            image = self.detector.detect(self.detector.session, image)
+            frame_info = self.detector.detect(self.detector.session, image)
+            image = frame_info['frame']
             # get image infos
             height, width, channel = image.shape
             step = channel * width
@@ -197,6 +277,7 @@ class VideoPlayer(QMainWindow):
             self.stopTimer()
 
     def openFile(self):
+        self.browseButton.setEnabled(False)
         self.videoFileName = QFileDialog.getOpenFileName(self, 'Select Video File')
         self.file_name = list(self.videoFileName)[0]
         self.cap = cv2.VideoCapture(self.file_name)
@@ -212,6 +293,7 @@ class VideoPlayer(QMainWindow):
         self.slider.setEnabled(True)
 
         self.playVideo()
+        self.browseButton.setEnabled(True)
 
     def playTimer(self):
         # start timer
@@ -247,7 +329,7 @@ class Detector:
         self.path_to_labels = 'data/labelmap.pbtxt'
         self.num_classes = 2
         self.max_boxes_to_draw = 1
-        self.min_score_thresh = .20
+        self.min_score_thresh = .15
 
         # Get category index
         self.label_map = label_map_util.load_labelmap(self.path_to_labels)
@@ -279,7 +361,7 @@ class Detector:
         scores = self.detection_graph.get_tensor_by_name('prefix/detection_scores:0')
         # Extract detection classes
         classes = self.detection_graph.get_tensor_by_name('prefix/detection_classes:0')
-        # Extract number of detectionsd
+        # Extract number of detections
         num_detections = self.detection_graph.get_tensor_by_name('prefix/num_detections:0')
         # Actual detection.
         start_time = time.time()
@@ -303,7 +385,14 @@ class Detector:
         cv2.putText(image, '{:.2f}ms'.format((end_time - start_time) * 1000), (40, 40), 0,
                     fontScale=1, color=(0, 255, 0), thickness=2)
 
-        return image
+        image_info = {
+            'frame': image,
+            'boxes': boxes,
+            'classes': classes,
+            'scores': scores
+        }
+
+        return image_info
 
 
 if __name__ == "__main__":
