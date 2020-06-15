@@ -17,6 +17,7 @@ import time
 from pascal_voc_writer import Writer
 from os.path import join
 import glob
+import csv
 
 import os
 if os.name == "nt":  # if windows
@@ -164,6 +165,9 @@ class VideoPlayer(QMainWindow):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(file_out_name, fourcc, input_fps, (self.width, self.height))
 
+        # Сформировать заголовок csv-файла с разметкой
+        images_list = [['image_id', 'x', 'y', 'w', 'h']]
+
         frame_statistics = []
         frame_id = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) - 1)
         frame_skip_count = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
@@ -203,10 +207,15 @@ class VideoPlayer(QMainWindow):
 
                     bbox_coords = boxes[0]
                     writer = Writer(frame_name, video_width, video_height)
-                    writer.addObject(rodent_class_name, bbox_coords[1] * video_width,
-                                    bbox_coords[0] * video_height, bbox_coords[3] * video_width,
-                                    bbox_coords[2] * video_height)
+                    x_min, y_min = bbox_coords[1] * video_width, bbox_coords[0] * video_height,
+                    x_max, y_max = bbox_coords[3] * video_width, bbox_coords[2] * video_height
+                    writer.addObject(rodent_class_name, x_min, y_min, x_max, y_max)
                     writer.save(video_images_dir + rodent_class_name + '/image_' + str(frame_id) + '.xml')
+
+                    # save csv-file
+                    images_list.append([frame_name,  # q
+                                        x_min, y_max,  # 'x', 'y'
+                                        x_max - x_min, y_max - y_min])  # 'w', 'h'
                 else:
                     # save frame
                     frame_name = video_images_dir + '/image_' + str(frame_id) + '.png'
@@ -252,6 +261,12 @@ class VideoPlayer(QMainWindow):
         print('Количество кадров с мышью: ' + str(statistics['frame_mouse_count']))
         print('Средняя вероятность крысы на видео: ' + str(statistics['mean_confidence_rat']))
         print('Средняя вероятность мыши на видео: ' + str(statistics['mean_confidence_mouse']))
+
+        # Создать CSV-файл с разметкой и записать в него данные
+        csv_file_name = 'mark.csv'
+        with open(video_dir + csv_file_name, mode='w', newline='') as csv_file:
+             csv_file_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_NONE)
+             csv_file_writer.writerows(images_list)
 
     def remove_files_in_dir(self, video_images_dir):
         images = glob.glob(join(video_images_dir, "*"))
