@@ -3,9 +3,9 @@ import cv2
 import sys
 
 from PyQt5 import QtGui, QtCore, QtWidgets
-from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen
 from PyQt5.uic import loadUi
-from PyQt5.QtCore import pyqtSlot, QTimer
+from PyQt5.QtCore import pyqtSlot, QTimer, Qt, QPoint
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QFileDialog
 import cv2
 
@@ -19,9 +19,17 @@ from os.path import join
 import glob
 import csv
 
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QLabel, QWidget
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import numpy as np
+import qimage2ndarray
+
 import os
+
 if os.name == "nt":  # if windows
     from PyQt5 import __file__
+
     pyqt_plugins = os.path.join(os.path.dirname(__file__), "Qt", "plugins")
     QApplication.addLibraryPath(pyqt_plugins)
     os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = pyqt_plugins
@@ -91,15 +99,15 @@ class VideoPlayer(QMainWindow):
         self.playVideo()
 
     def skipUp(self):
-        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))+999)
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)) + 999)
         self.playVideo()
 
     def skipDown(self):
-        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))-1001)
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)) - 1001)
         self.playVideo()
 
     def skipLeft(self):
-        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))-2)
+        self.cap.set(1, int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)) - 2)
         ret, image = self.cap.read()
         progress = str(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))) + ' / ' \
                    + str(int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)))
@@ -135,6 +143,7 @@ class VideoPlayer(QMainWindow):
             self.playTimer()
 
     def detectVideo(self):
+
         # Создать директорию с кадрами для заданного видео
         video_base_name = os.path.basename(self.file_name)
         video_name = os.path.splitext(video_base_name)[0]
@@ -174,6 +183,8 @@ class VideoPlayer(QMainWindow):
         total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if frame_id >= 0 & frame_id <= total_frames:
             video.set(1, frame_id)
+        points = []
+        frame_points = None
         while True:
             ret, frame = video.read()
             if ret is True:
@@ -181,6 +192,7 @@ class VideoPlayer(QMainWindow):
                 frame_detect = frame.copy()
                 frame_detect = cv2.cvtColor(frame_detect, cv2.COLOR_BGR2RGB)
                 frame_detect = cv2.resize(frame_detect, (self.width, self.height))
+                frame_points = frame_detect.copy()
                 frame_info = self.detector.detect(self.detector.session, frame_detect)
                 frame_id = int(video.get(cv2.CAP_PROP_POS_FRAMES))
 
@@ -190,10 +202,10 @@ class VideoPlayer(QMainWindow):
                 rodent_class_name = self.detector.category_index[rodent_class_id]['name']
                 if rodent_confidence > self.detector.min_score_thresh:
                     frame_statistics.append({'frame_id': frame_id,
-                                            'confidence': rodent_confidence,
-                                            'rodent_class_id': rodent_class_id,
-                                            'rodent_class_name': rodent_class_name,
-                                            })
+                                             'confidence': rodent_confidence,
+                                             'rodent_class_id': rodent_class_id,
+                                             'rodent_class_name': rodent_class_name,
+                                             })
 
                     # save frame
                     frame_name = video_images_dir + rodent_class_name + '/image_' + str(frame_id) + '.png'
@@ -216,6 +228,13 @@ class VideoPlayer(QMainWindow):
                     images_list.append([frame_name,  # q
                                         x_min, y_max,  # 'x', 'y'
                                         x_max - x_min, y_max - y_min])  # 'w', 'h'
+
+                    # save track points
+                    x_min_sm, y_min_sm = bbox_coords[1] * self.width, bbox_coords[0] * self.height,
+                    x_max_sm, y_max_sm = bbox_coords[3] * self.width, bbox_coords[2] * self.height
+                    point_x = (x_min_sm + (x_max_sm - x_min_sm) / 2)
+                    point_y = (y_min_sm + (y_max_sm - y_min_sm) / 2)
+                    points.append([point_x, point_y])  # 'w', 'h'
                 else:
                     # save frame
                     frame_name = video_images_dir + '/image_' + str(frame_id) + '.png'
@@ -265,8 +284,17 @@ class VideoPlayer(QMainWindow):
         # Создать CSV-файл с разметкой и записать в него данные
         csv_file_name = 'mark.csv'
         with open(video_dir + csv_file_name, mode='w', newline='') as csv_file:
-             csv_file_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_NONE)
-             csv_file_writer.writerows(images_list)
+            csv_file_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_NONE)
+            csv_file_writer.writerows(images_list)
+
+        if points:
+            self.open_new_dialog(frame_points, points)
+
+        self.browseButton.setEnabled(True)
+        self.playButton.setEnabled(True)
+        self.stopButton.setEnabled(False)
+        self.slider.setEnabled(True)
+        self.gotoButton.setEnabled(True)
 
     def remove_files_in_dir(self, video_images_dir):
         images = glob.glob(join(video_images_dir, "*"))
@@ -299,7 +327,7 @@ class VideoPlayer(QMainWindow):
         self.progresslabel.setText(progress)
 
     def playVideo(self):
-         # read image in BGR format
+        # read image in BGR format
         ret, image = self.cap.read()
         if ret is True:
             progress = str(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))) + ' / ' \
@@ -370,6 +398,50 @@ class VideoPlayer(QMainWindow):
         cv2.destroyAllWindows()
         self.close()
 
+    def open_new_dialog(self, frame, points):
+        self.SW = TrackView(frame, points)
+        self.SW.resize(300, 300)
+        self.SW.show()
+
+class TrackView(QMainWindow):
+    def __init__(self, frame, points):
+        super(TrackView, self).__init__()
+        self.main_widget = QtWidgets.QWidget()
+        self.setCentralWidget(self.main_widget)
+
+        layout = QtWidgets.QVBoxLayout(self.main_widget)
+
+        self.frame = frame
+        self.points = points
+
+        height, width, channel = self.frame.shape
+        step = channel * width
+        # create QImage from image
+        qImg = QImage(self.frame.data, width, height, step, QImage.Format_RGB888)
+        # show image in img_label
+
+        label = QLabel(self)
+        layout.addWidget(label)
+
+        pixmap_image = QPixmap.fromImage(qImg)
+
+        # create painter instance with pixmap
+        painterInstance = QtGui.QPainter(pixmap_image)
+
+        # set rectangle color and thickness
+        pen = QtGui.QPen(QtCore.Qt.red)
+        pen.setWidth(3)
+
+        # draw rectangle on painter
+        painterInstance.setPen(pen)
+        for i in range(len(self.points)):
+            if i + 1 < len(self.points):
+                painterInstance.drawLine(self.points[i][0], self.points[i][1], self.points[i + 1][0],
+                                         self.points[i + 1][1])
+
+        # set pixmap onto the label widget
+        label.setPixmap(pixmap_image)
+        label.show()
 
 class Detector:
 
