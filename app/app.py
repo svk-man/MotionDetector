@@ -440,6 +440,7 @@ class TrackView(QMainWindow):
                                          self.points[i + 1][1])
 
         # set pixmap onto the label widget
+        painterInstance.end()
         label.setPixmap(pixmap_image)
         label.show()
 
