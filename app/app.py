@@ -281,6 +281,17 @@ class VideoPlayer(QMainWindow):
         print('Средняя вероятность крысы на видео: ' + str(statistics['mean_confidence_rat']))
         print('Средняя вероятность мыши на видео: ' + str(statistics['mean_confidence_mouse']))
 
+        # Сохранить статистику в текстовый файл
+        txt_file_name = 'statistics.txt'
+        with open(video_dir + txt_file_name, mode='w', newline='') as txt_file:
+            txt_file.write('Количество кадров: ' + str(statistics['frame_count']) + '\n')
+            txt_file.write('Количество пропущенных кадров: ' + str(statistics['frame_skip_count']) + '\n')
+            txt_file.write('Количество кадров с грызуном: ' + str(statistics['frame_rodent_count']) + '\n')
+            txt_file.write('Количество кадров с крысой: ' + str(statistics['frame_rat_count']) + '\n')
+            txt_file.write('Количество кадров с мышью: ' + str(statistics['frame_mouse_count']) + '\n')
+            txt_file.write('Средняя вероятность крысы на видео: ' + str(statistics['mean_confidence_rat']) + '\n')
+            txt_file.write('Средняя вероятность мыши на видео: ' + str(statistics['mean_confidence_mouse']) + '\n')
+
         # Создать CSV-файл с разметкой и записать в него данные
         csv_file_name = 'mark.csv'
         with open(video_dir + csv_file_name, mode='w', newline='') as csv_file:
