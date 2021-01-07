@@ -2,7 +2,7 @@ Cython==0.29.20
 Pillow==7.1.2
 PyQt5==5.14.2
 contextlib2==0.6.0.post1
-lxml==4.5.1
+lxml==4.6.2
 jupyter==1.0.0
 matplotlib==3.2.1
 tensorflow==1.13.1
